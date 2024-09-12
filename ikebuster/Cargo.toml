@@ -1,0 +1,13 @@
+[package]
+name = "ikebuster"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Niklas Pfister <git@omikron.dev>"]
+
+[dependencies]
+# CLI parser
+clap = { version = "~4", features = ["derive"] }
+
+# Async runtime
+tokio = { version = ">=1.23.1", features = ["full"] }
