@@ -1,0 +1,12 @@
+[package]
+name = "ike-parser"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Niklas Pfister <git@omikron.dev>"]
+
+[dependencies]
+isakmp = { version = "~0.1", path = "../isakmp" }
+
+# error handling
+thiserror = { version = "~1" }

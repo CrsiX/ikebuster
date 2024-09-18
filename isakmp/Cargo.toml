@@ -1,0 +1,13 @@
+[package]
+name = "isakmp"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Niklas Pfister <git@omikron.dev>"]
+
+[dependencies]
+# Error management
+thiserror = { version = "~1" }
+
+# Zerocost memory manipulation
+zerocopy = { version = "~0.7", features = ["derive"] }

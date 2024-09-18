@@ -1,5 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "./ikebuster"
+    "./ikebuster",
+    "./ike-parser",
+    "./isakmp",
 ]
