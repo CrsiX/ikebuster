@@ -1,0 +1,22 @@
+---
+- name: Provision target
+  hosts: target
+  vars:
+    ansible_become: yes
+    ansible_user: ansible
+  tasks:
+    - name: Target
+      apt:
+        update_cache: yes
+        name:
+          - strongswan-swanctl
+          - charon-systemd
+    - name: Copy swanctl
+      copy:
+        src: target/swanctl.conf
+        dest: /etc/swanctl/swanctl.conf
+
+    - name: Restart strongswan
+      systemd:
+        name: strongswan-swanctl
+        state: restarted

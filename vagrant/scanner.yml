@@ -1,0 +1,28 @@
+---
+- name: Provision Scanner
+  hosts: scanner
+  vars:
+    ansible_become: yes
+    ansible_user: ansible
+  tasks:
+    - name: Setup packages
+      apt:
+        update_cache: yes
+        name:
+          - build-essential
+          - nmap
+          - ike-scan
+    - name: Check for rustup
+      ansible.builtin.stat:
+        path: "/tmp/rustup.sh"
+      register: rustup_file
+    - name: Download rustup
+      become_user: vagrant
+      ansible.builtin.shell:
+        cmd: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /tmp/rustup.sh"
+      when: not rustup_file.stat.exists
+    - name: Execute installer
+      become_user: vagrant
+      ansible.builtin.shell:
+        cmd: "sh /tmp/rustup.sh -y"
+      when: not rustup_file.stat.exists
