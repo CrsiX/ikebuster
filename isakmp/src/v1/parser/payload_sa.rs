@@ -1,13 +1,13 @@
 //! Parsers of the security association payload
 
-use isakmp::v1::DomainOfInterpretation;
-use isakmp::v1::PayloadType;
-use isakmp::v1::StaticSecurityAssociationPayload;
-use isakmp::zerocopy::FromBytes;
+use zerocopy::FromBytes;
 
-use crate::v1::definitions::SecurityAssociationPayload;
-use crate::v1::errors::IsakmpParseError;
-use crate::v1::payload_proposal::parse_proposal;
+use crate::v1::definitions::DomainOfInterpretation;
+use crate::v1::definitions::PayloadType;
+use crate::v1::definitions::StaticSecurityAssociationPayload;
+use crate::v1::parser::definitions::SecurityAssociationPayload;
+use crate::v1::parser::errors::IsakmpParseError;
+use crate::v1::parser::payload_proposal::parse_proposal;
 
 /// Parse a security association payload
 pub fn parse_security_association(

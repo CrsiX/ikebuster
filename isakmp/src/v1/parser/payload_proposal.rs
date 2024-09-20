@@ -1,22 +1,22 @@
 //! Parser of the proposal payload
 
-use isakmp::v1::PayloadType;
-use isakmp::zerocopy::FromBytes;
+use zerocopy::FromBytes;
 
-use crate::v1::definitions::ProposalPayload;
-use crate::v1::errors::IsakmpParseError;
-use crate::v1::payload_transform::parse_transform;
+use crate::v1::definitions::PayloadType;
+use crate::v1::parser::definitions::ProposalPayload;
+use crate::v1::parser::errors::IsakmpParseError;
+use crate::v1::parser::payload_transform::parse_transform;
 
 /// Parse a proposal payload
 pub fn parse_proposal(buf: &[u8]) -> Result<ProposalPayload, IsakmpParseError> {
-    let static_part = isakmp::v1::StaticProposalPayload::ref_from_prefix(buf)
+    let static_part = crate::v1::definitions::StaticProposalPayload::ref_from_prefix(buf)
         .ok_or(IsakmpParseError::BufferTooSmall)?;
 
     if static_part.generic_payload_header.reserved != 0 {
         return Err(IsakmpParseError::UnexpectedPayload);
     }
 
-    let static_size = size_of::<isakmp::v1::StaticProposalPayload>();
+    let static_size = size_of::<crate::v1::definitions::StaticProposalPayload>();
 
     let spi = buf
         .get(static_size..static_size + static_part.spi_size as usize)

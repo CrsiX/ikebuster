@@ -1,10 +1,10 @@
 //! The high level definitions of parts of an isakmp message
 
-use isakmp::v1::AttributeType;
-use isakmp::v1::DomainOfInterpretation;
-use isakmp::v1::ExchangeType;
-use isakmp::v1::NotifyMessageType;
-use isakmp::v1::PayloadType;
+use crate::v1::definitions::AttributeType;
+use crate::v1::definitions::DomainOfInterpretation;
+use crate::v1::definitions::ExchangeType;
+use crate::v1::definitions::NotifyMessageType;
+use crate::v1::definitions::PayloadType;
 
 /// The high level representation of an ISAKMP message, version 1
 #[derive(Debug, Clone)]

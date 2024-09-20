@@ -1,12 +1,12 @@
 //! Parser for the notification payload
 
-use isakmp::v1::NotifyMessageType;
-use isakmp::v1::PayloadType;
-use isakmp::v1::StaticNotificationPayload;
-use isakmp::zerocopy::FromBytes;
+use zerocopy::FromBytes;
 
-use crate::v1::definitions::NotificationPayload;
-use crate::v1::errors::IsakmpParseError;
+use crate::v1::definitions::NotifyMessageType;
+use crate::v1::definitions::PayloadType;
+use crate::v1::definitions::StaticNotificationPayload;
+use crate::v1::parser::definitions::NotificationPayload;
+use crate::v1::parser::errors::IsakmpParseError;
 
 /// Parse a notification payload
 pub fn parse_notification(buf: &[u8]) -> Result<NotificationPayload, IsakmpParseError> {

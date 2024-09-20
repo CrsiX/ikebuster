@@ -5,32 +5,34 @@
 #![warn(missing_docs, clippy::unwrap_used, clippy::expect_used)]
 
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::error::Error;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 
-use isakmp::strum::IntoEnumIterator;
-use isakmp::v1::AuthenticationMethod;
-use isakmp::v1::EncryptionAlgorithm;
-use isakmp::v1::GroupDescription;
-use isakmp::v1::HashAlgorithm;
-use itertools::iproduct;
+use isakmp::v1::definitions::NotifyMessageType;
+use isakmp::v1::generator::MessageBuilder;
+use isakmp::v1::generator::Transform;
 use tokio::net::UdpSocket;
-use tokio::task::JoinHandle;
+use tokio::select;
+use tokio::sync::mpsc;
+use tokio::time::interval;
 use tokio::time::sleep;
+use tracing::debug;
 use tracing::error;
 use tracing::info;
 use tracing::instrument;
-use tracing::Instrument;
+use tracing::trace;
+use tracing::warn;
 
-use crate::v1::generation::MessageBuilder;
-use crate::v1::generation::Transform;
+use crate::recv::ReceiveError;
+use crate::utils::gen_transforms::gen_v1_transforms;
+use crate::utils::payload_to_transforms::payload_to_transforms;
 
 mod recv;
-pub mod v1;
+pub mod utils;
 
 /// The results of the scan
 #[derive(Debug, Clone)]
@@ -47,88 +49,162 @@ pub struct ScanOptions {
     /// Target port
     pub port: u16,
     /// Interval between each sent message
-    pub interval: usize,
+    pub interval: u64,
     /// Number of transforms to send in a single proposal
     pub transform_no: usize,
+    /// The sleep to set when a valid transform is found.
+    ///
+    /// This may be important as some servers timeout requests when requests aren't fully closed
+    pub sleep_on_transform_found: Duration,
 }
 
 /// Scan the provided ip address
 #[instrument(skip_all)]
 pub async fn scan(opts: ScanOptions) -> Result<ScanResult, Box<dyn Error>> {
+    // Initialize udp socket
     let addr = SocketAddr::new(opts.ip, opts.port);
 
-    info!("Trying to connect to {addr}");
+    info!("Binding and starting to scan {addr}");
     let socket = Arc::new(match addr.ip() {
-        IpAddr::V4(_) => UdpSocket::bind("0.0.0.0:0").await?,
-        IpAddr::V6(_) => UdpSocket::bind("[::]:0").await?,
+        IpAddr::V4(_) => UdpSocket::bind("0.0.0.0:500").await?,
+        IpAddr::V6(_) => UdpSocket::bind("[::]:500").await?,
     });
     socket.connect(&addr).await?;
 
-    let messages = Arc::new(Mutex::new(HashMap::new()));
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let mut interval = interval(Duration::from_millis(opts.interval));
 
-    let s = socket.clone();
-    let m = messages.clone();
-    let t: JoinHandle<Result<(), String>> =
-        tokio::spawn(recv::handle_receive(s, m).instrument(tracing::info_span!("recv")));
+    tokio::spawn(recv::handle_receive(socket.clone(), tx));
 
-    sleep(Duration::from_millis(100)).await;
+    // list of a list of transforms which should be sent in the future
+    let mut todo: VecDeque<Vec<_>> = gen_v1_transforms(opts.transform_no);
 
-    let iterator = iproduct!(
-        EncryptionAlgorithm::iter().filter(|x| *x as u16 != 0),
-        HashAlgorithm::iter().filter(|x| *x as u16 != 0),
-        AuthenticationMethod::iter().filter(|x| *x as u16 != 0),
-        GroupDescription::iter().filter(|x| *x as u16 != 0),
-    )
-    .fold(vec![], |mut acc, (e, h, a, g)| {
-        if e == EncryptionAlgorithm::AES_CBC {
-            acc.push((e, h, a, g, Some(128)));
-            acc.push((e, h, a, g, Some(192)));
-            acc.push((e, h, a, g, Some(256)));
-        } else {
-            acc.push((e, h, a, g, None));
+    // Lookup of cookie to the transforms that were sent in the corresponding message
+    let mut open: HashMap<u64, Vec<Transform>> = HashMap::new();
+
+    // The valid transforms that were found
+    let mut found: Vec<Transform> = vec![];
+
+    // If sleep is active, the sending part will pause
+    let mut do_sleep = false;
+
+    loop {
+        select! {
+            // Handle received isakmp messages or errors from receiving side
+            msg_res = rx.recv() => {
+                if let Some(res) = msg_res {
+                    match res {
+                        Ok(msg) => {
+                            trace!("Received message: {msg:?}");
+
+                            // Retrieving a security association means we got at least one transform right
+                            if !msg.security_associations.is_empty() {
+                                for sa in &msg.security_associations {
+                                    for prop in &sa.proposal_payload {
+                                        do_sleep = true;
+
+                                        let Ok(transforms) = payload_to_transforms(prop) else {
+                                            warn!("Could not retrieve transform from msg: {msg:?}");
+                                            continue;
+                                        };
+
+                                        // Add the found transform to our list
+                                        found.extend(transforms.clone());
+
+                                        let Some(all) = open.get(&msg.header.initiator_cookie) else {
+                                            warn!("Missing initiator cookie");
+                                            continue;
+                                        };
+
+                                        // Retrieve all transforms not returned in the message
+                                        let other: Vec<Transform> = all.clone().into_iter().filter(|x| !transforms.contains(x)).collect();
+
+                                        // Split the transforms into two new messages
+                                        let  [mut a,mut b] = [vec![], vec![]];
+                                        for x in other {
+                                            if a.len() == b.len() {
+                                                a.push(x);
+                                            } else {
+                                                b.push(x);
+                                            }
+                                        }
+
+                                        // create new todos
+                                        if !b.is_empty() {
+                                            todo.push_back(a);
+                                            todo.push_back(b);
+                                        } else if !a.is_empty() {
+                                            todo.push_back(a);
+                                        }
+                                    }
+                                }
+                                let removed = open.remove(&msg.header.initiator_cookie);
+                                if removed.is_none() {
+                                    warn!("Could not find corresponding initiator cookie: {}", msg.header.initiator_cookie);
+                                }
+
+                            // A notification of type NO_PROPOSAL_CHOSEN means all transforms were invalid
+                            } else if msg.notification_payloads.iter().any(|x| x.notify_message_type == NotifyMessageType::NoProposalChosen) {
+                                let removed = open.remove(&msg.header.initiator_cookie);
+                                if removed.is_none() {
+                                    warn!("Could not find corresponding initiator cookie: {}", msg.header.initiator_cookie);
+                                }
+                            } else {
+                                warn!("Unknown message: {:?}", msg)
+                            }
+
+                        }
+                        Err(err) => match err {
+                            ReceiveError::Io(err) => {
+                                error!("Error in receiving side: {err}");
+                                return Err(Box::new(err))
+                            }
+                            ReceiveError::InvalidMessage(err) => {
+                                trace!("Could not parse incoming message: {err}");
+                            }}
+                    }
+                }
+            }
+
+            // Handle the sending of messages
+            _ = interval.tick() => {
+                match todo.pop_front() {
+                    // Nothing more todo, this will be the return path
+                    None => {
+                        debug!("Nothing more to do, waiting some time for more incoming messages");
+                        interval.tick().await;
+                        if todo.is_empty() {
+                            found.sort();
+                            found.dedup();
+
+                            return Ok(ScanResult {
+                                valid_transforms: found,
+                             })
+                        }
+                    }
+                    Some(transforms) => {
+                        let mut mb = MessageBuilder::new();
+                        for transform in &transforms {
+                            mb = mb.add_transform(transform.clone());
+                        }
+                        let (msg, initiator_cookie) = mb.build();
+                        trace!("Send ({initiator_cookie}) transforms: {transforms:?}");
+
+                        if do_sleep {
+                            info!(
+                                "Sleep {} seconds to evade running into timeout due to half-open connections",
+                                opts.sleep_on_transform_found.as_secs(),
+                            );
+                            sleep(opts.sleep_on_transform_found).await;
+                            do_sleep = false;
+                        }
+
+                        open.insert(initiator_cookie, transforms);
+                        socket.send(&msg).await?;
+
+                    }}
+
+            }
         }
-
-        acc
-    });
-
-    const CHUNK_SIZE: usize = 100;
-    let mut curr = 0;
-    for chunk in iterator.chunks(CHUNK_SIZE) {
-        curr += CHUNK_SIZE;
-
-        let mut mb = MessageBuilder::new();
-
-        let mut transforms = vec![];
-
-        for (enc, hash, auth, group, key_size) in chunk {
-            let transform = Transform {
-                encryption_algorithm: *enc,
-                hash_algorithm: *hash,
-                authentication_method: *auth,
-                group_description: *group,
-                key_size: *key_size,
-            };
-            transforms.push(transform.clone());
-            mb = mb.add_transform(transform);
-        }
-
-        let (raw, initiator) = mb.build();
-
-        messages.lock().unwrap().insert(initiator, transforms);
-
-        socket.send(&raw).await?;
-
-        sleep(Duration::from_millis(100)).await;
     }
-
-    info!("Finished sending transforms");
-
-    if let Err(err) = t.await? {
-        error!("{err}");
-        return Err(Box::from(err));
-    }
-
-    Ok(ScanResult {
-        valid_transforms: vec![],
-    })
 }

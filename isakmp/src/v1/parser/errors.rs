@@ -1,12 +1,13 @@
 //! The errors of the parsers
 
-use isakmp::v1::AttributeTypeOther;
-use isakmp::v1::CertificateEncodingOther;
-use isakmp::v1::ExchangeTypeOther;
-use isakmp::v1::InvalidDomainOfInterpretation;
-use isakmp::v1::NotifyMessageTypeOther;
-use isakmp::v1::PayloadTypeOther;
 use thiserror::Error;
+
+use crate::v1::definitions::AttributeTypeOther;
+use crate::v1::definitions::CertificateEncodingOther;
+use crate::v1::definitions::ExchangeTypeOther;
+use crate::v1::definitions::InvalidDomainOfInterpretation;
+use crate::v1::definitions::NotifyMessageTypeOther;
+use crate::v1::definitions::PayloadTypeOther;
 
 /// The errors that can occur while parsing an ISAKMP message
 #[derive(Debug, Error)]

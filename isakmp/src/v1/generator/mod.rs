@@ -1,24 +1,32 @@
 //! Message generation
 
-use isakmp::v1::AuthenticationMethod;
-use isakmp::v1::DataAttributeShort;
-use isakmp::v1::EncryptionAlgorithm;
-use isakmp::v1::ExchangeType;
-use isakmp::v1::GenericPayloadHeader;
-use isakmp::v1::GroupDescription;
-use isakmp::v1::HashAlgorithm;
-use isakmp::v1::LifeType;
-use isakmp::v1::StaticTransformPayload;
-use isakmp::zerocopy::network_endian::*;
-use isakmp::zerocopy::AsBytes;
-use isakmp::zerocopy::U16;
-use isakmp::zerocopy::U32;
+use zerocopy::network_endian::*;
+use zerocopy::AsBytes;
+use zerocopy::U16;
+use zerocopy::U32;
+
+use crate::v1::definitions::AuthenticationMethod;
+use crate::v1::definitions::DataAttributeShort;
+use crate::v1::definitions::EncryptionAlgorithm;
+use crate::v1::definitions::ExchangeType;
+use crate::v1::definitions::GenericPayloadHeader;
+use crate::v1::definitions::GroupDescription;
+use crate::v1::definitions::HashAlgorithm;
+use crate::v1::definitions::Header;
+use crate::v1::definitions::LifeType;
+use crate::v1::definitions::PayloadType;
+use crate::v1::definitions::StaticProposalPayload;
+use crate::v1::definitions::StaticSecurityAssociationPayload;
+use crate::v1::definitions::StaticTransformPayload;
+use crate::v1::definitions::VariableProposalPayload;
+use crate::v1::definitions::VariableSecurityAssociationPayload;
+use crate::v1::definitions::VariableTransformPayload;
 
 /// Representation of a Transform
 ///
 /// A transform consists of multiple attributes that determine the encryption and authentication
 /// that should be used
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Transform {
     /// Encryption algorithm
     pub encryption_algorithm: EncryptionAlgorithm,
@@ -32,7 +40,7 @@ pub struct Transform {
     pub key_size: Option<u16>,
 }
 
-/// Helper struct to build an ISAKMP message
+/// Helper struct to build an crate message
 pub struct MessageBuilder {
     transforms: Vec<Transform>,
 }
@@ -52,37 +60,41 @@ impl MessageBuilder {
     }
 
     /// Create a test message
+    ///
+    /// # Returns
+    /// - the isakmp message
+    /// - the initiator cookie
     pub fn build(self) -> (Vec<u8>, u64) {
         let mut msg = vec![];
 
-        let mut overall_msg_length = size_of::<isakmp::v1::Header>();
+        let mut overall_msg_length = size_of::<Header>();
 
-        let mut header = isakmp::v1::Header {
+        let mut header = Header {
             initiator_cookie: U64::new(rand::random::<u64>()),
             responder_cookie: U64::new(0),
-            next_payload: isakmp::v1::PayloadType::SecurityAssociation as u8,
+            next_payload: PayloadType::SecurityAssociation as u8,
             version: 0b00010000,
             exchange_type: ExchangeType::IdentityProtection as u8,
             flags: 0,
             message_id: Default::default(),
             length: Default::default(),
         };
-        let mut sa = isakmp::v1::StaticSecurityAssociationPayload {
+        let mut sa = StaticSecurityAssociationPayload {
             generic_payload_header: GenericPayloadHeader {
-                next_payload: isakmp::v1::PayloadType::None as u8,
+                next_payload: PayloadType::None as u8,
                 reserved: 0,
                 payload_length: Default::default(),
             },
             doi: U32::new(1),
         };
 
-        let sa_var = isakmp::v1::VariableSecurityAssociationPayload {
+        let sa_var = VariableSecurityAssociationPayload {
             situation: vec![0x00, 0x00, 0x00, 0x01],
         };
 
-        let mut proposal = isakmp::v1::StaticProposalPayload {
+        let mut proposal = StaticProposalPayload {
             generic_payload_header: GenericPayloadHeader {
-                next_payload: isakmp::v1::PayloadType::None as u8,
+                next_payload: PayloadType::None as u8,
                 reserved: 0,
                 payload_length: Default::default(),
             },
@@ -92,16 +104,16 @@ impl MessageBuilder {
             no_of_transforms: self.transforms.len() as u8,
         };
 
-        let proposal_var = isakmp::v1::VariableProposalPayload { spi: vec![] };
+        let proposal_var = VariableProposalPayload { spi: vec![] };
 
         let mut transforms_raw: Vec<u8> = vec![];
         for (i, transform) in self.transforms.iter().enumerate() {
             let mut transform_payload = StaticTransformPayload {
                 generic_payload_header: GenericPayloadHeader {
                     next_payload: if i < self.transforms.len() - 1 {
-                        isakmp::v1::PayloadType::Transform as u8
+                        PayloadType::Transform as u8
                     } else {
-                        isakmp::v1::PayloadType::None as u8
+                        PayloadType::None as u8
                     },
                     reserved: 0,
                     payload_length: Default::default(),
@@ -163,7 +175,7 @@ impl MessageBuilder {
                     .as_bytes(),
                 );
             }
-            let transform_var = isakmp::v1::VariableTransformPayload { sa_attributes };
+            let transform_var = VariableTransformPayload { sa_attributes };
 
             transform_payload.generic_payload_header.payload_length = U16::new(
                 (size_of::<StaticTransformPayload>() + transform_var.sa_attributes.len()) as u16,
@@ -176,8 +188,8 @@ impl MessageBuilder {
         // Set sa length
         let mut sa_size = 0;
         let mut proposal_size = 0;
-        let static_sa_size = size_of::<isakmp::v1::StaticSecurityAssociationPayload>();
-        let static_proposal_size = size_of::<isakmp::v1::StaticProposalPayload>();
+        let static_sa_size = size_of::<StaticSecurityAssociationPayload>();
+        let static_proposal_size = size_of::<StaticProposalPayload>();
 
         sa_size += static_sa_size;
         sa_size += sa_var.situation.len();
@@ -217,5 +229,11 @@ impl MessageBuilder {
         msg.resize(overall_msg_length, 0);
 
         (msg, header.initiator_cookie.get())
+    }
+}
+
+impl Default for MessageBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -15,7 +15,6 @@ name = "ikebuster"
 
 [dependencies]
 isakmp = { version = "*", path = "../isakmp" }
-ike-parser = { version = "*", path = "../ike-parser" }
 
 # CLI parser
 clap = { version = "~4", features = ["derive"] }

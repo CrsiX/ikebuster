@@ -1,10 +1,12 @@
 use std::env;
 use std::net::IpAddr;
 use std::process::exit;
+use std::time::Duration;
 
 use clap::Parser;
 use ikebuster::ScanOptions;
 use tracing::error;
+use tracing::info;
 
 /// The cli of ikebuster
 #[derive(Debug, Parser)]
@@ -19,7 +21,7 @@ pub struct Cli {
 
     /// The interval in milliseconds in which the messages should be sent
     #[clap(short, long, default_value_t = 500)]
-    pub interval: usize,
+    pub interval: u64,
 
     /// The number of transforms to send in a proposal
     #[clap(long, default_value_t = 20)]
@@ -28,6 +30,12 @@ pub struct Cli {
     /// Output the results in a json file
     #[clap(long)]
     pub json: bool,
+
+    /// The sleep time (in seconds) after a valid transform is found.
+    ///
+    /// Some servers limit new requests when there are half-open connections
+    #[clap(long, default_value_t = 45)]
+    pub sleep_on_transform_found: u64,
 
     /// The path to write output to. Only used in combination with --json
     #[clap(short, long, default_value_t = String::from("./output_ikebuster.json"))]
@@ -48,6 +56,7 @@ async fn main() {
         port: cli.port,
         interval: cli.interval,
         transform_no: cli.transforms,
+        sleep_on_transform_found: Duration::new(cli.sleep_on_transform_found, 0),
     };
 
     let res = match ikebuster::scan(opts).await {
@@ -57,4 +66,18 @@ async fn main() {
             exit(1);
         }
     };
+
+    for valid in res.valid_transforms {
+        info!(
+            "ENC={} HASH={} AUTH={} GROUP={}",
+            if let Some(key_len) = valid.key_size {
+                format!("{}/{key_len}", valid.encryption_algorithm)
+            } else {
+                valid.encryption_algorithm.to_string()
+            },
+            valid.hash_algorithm,
+            valid.authentication_method,
+            valid.group_description,
+        );
+    }
 }

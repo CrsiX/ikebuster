@@ -1,35 +1,13 @@
-//! Helper functions
+//! Formatting helpers
 
-use ike_parser::v1::definitions::DataAttribute;
-use isakmp::v1::AttributeType;
-use isakmp::v1::AuthenticationMethod;
-use isakmp::v1::EncryptionAlgorithm;
-use isakmp::v1::GroupDescription;
-use isakmp::v1::GroupType;
-use isakmp::v1::HashAlgorithm;
-use isakmp::v1::LifeType;
-
-fn format_attribute_type(attribute_type: &AttributeType) -> &'static str {
-    match attribute_type {
-        AttributeType::Reserved => "Reserved",
-        AttributeType::EncryptionAlgorithm => "EncryptionAlgorithm",
-        AttributeType::HashAlgorithm => "HashAlgorithm",
-        AttributeType::AuthenticationMethod => "AuthenticationMethod",
-        AttributeType::GroupDescription => "GroupDescription",
-        AttributeType::GroupType => "GroupType",
-        AttributeType::GroupPrime => "GroupPrime",
-        AttributeType::GroupGeneratorOne => "GroupGeneratorOne",
-        AttributeType::GroupGeneratorTwo => "GroupGeneratorTwo",
-        AttributeType::GroupCurveA => "GroupCurveA",
-        AttributeType::GroupCurveB => "GroupCurveB",
-        AttributeType::LifeType => "Lifetime",
-        AttributeType::LifeDuration => "LifeDuration",
-        AttributeType::PRF => "PRF",
-        AttributeType::KeyLength => "KeyLength",
-        AttributeType::FieldSize => "FieldSize",
-        AttributeType::GroupOrder => "GroupOrder",
-    }
-}
+use isakmp::v1::definitions::AttributeType;
+use isakmp::v1::definitions::AuthenticationMethod;
+use isakmp::v1::definitions::EncryptionAlgorithm;
+use isakmp::v1::definitions::GroupDescription;
+use isakmp::v1::definitions::GroupType;
+use isakmp::v1::definitions::HashAlgorithm;
+use isakmp::v1::definitions::LifeType;
+use isakmp::v1::parser::definitions::DataAttribute;
 
 fn format_attribute_value_short(attribute_type: &AttributeType, attribute_value: u16) -> String {
     match attribute_type {
@@ -56,16 +34,12 @@ pub fn format_attribute(attribute: &DataAttribute) -> String {
         DataAttribute::DataAttributeShort(attr) => {
             format!(
                 "{}={}",
-                format_attribute_type(&attr.attribute_type),
+                attr.attribute_type,
                 format_attribute_value_short(&attr.attribute_type, attr.attribute_value)
             )
         }
         DataAttribute::DataAttributeLong(attr) => {
-            format!(
-                "{}={:?}",
-                format_attribute_type(&attr.attribute_type),
-                attr.attribute_value
-            )
+            format!("{}={:?}", attr.attribute_type, attr.attribute_value)
         }
     }
 }

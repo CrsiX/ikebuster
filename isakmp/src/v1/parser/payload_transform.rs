@@ -1,15 +1,15 @@
 //! Parser of the transform payload
 
-use isakmp::v1::PayloadType;
-use isakmp::zerocopy::FromBytes;
+use zerocopy::FromBytes;
 
-use crate::v1::data_attribute::parse_data_attribute;
-use crate::v1::definitions::TransformPayload;
-use crate::v1::errors::IsakmpParseError;
+use crate::v1::definitions::PayloadType;
+use crate::v1::parser::data_attribute::parse_data_attribute;
+use crate::v1::parser::definitions::TransformPayload;
+use crate::v1::parser::errors::IsakmpParseError;
 
 /// Parse a transform payload
 pub fn parse_transform(buf: &[u8]) -> Result<TransformPayload, IsakmpParseError> {
-    let static_part = isakmp::v1::StaticTransformPayload::ref_from_prefix(buf)
+    let static_part = crate::v1::definitions::StaticTransformPayload::ref_from_prefix(buf)
         .ok_or(IsakmpParseError::BufferTooSmall)?;
 
     if static_part.generic_payload_header.reserved != 0 || static_part.reserved.get() != 0 {
@@ -24,7 +24,7 @@ pub fn parse_transform(buf: &[u8]) -> Result<TransformPayload, IsakmpParseError>
         sa_attributes: vec![],
     };
 
-    let static_size = size_of::<isakmp::v1::StaticTransformPayload>();
+    let static_size = size_of::<crate::v1::definitions::StaticTransformPayload>();
 
     let remaining = &buf[static_size..transform.length as usize];
 

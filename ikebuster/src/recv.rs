@@ -1,61 +1,52 @@
-use std::collections::HashMap;
+use std::io;
 use std::sync::Arc;
-use std::sync::Mutex;
 
-use isakmp::v1::ExchangeType;
-use isakmp::v1::NotifyMessageType;
+use isakmp::v1::parser::definitions::Packet;
+use isakmp::v1::parser::errors::IsakmpParseError;
+use thiserror::Error;
 use tokio::net::UdpSocket;
-use tracing::debug;
-use tracing::info;
-use tracing::trace;
-
-use crate::v1::generation::Transform;
-use crate::v1::helper::format_attribute;
+use tokio::sync::mpsc::UnboundedSender;
 
 /// Handle the receival of isakmp messages
+///
+/// After a message is received, it is sent back via the provided channel
 pub async fn handle_receive(
-    s: Arc<UdpSocket>,
-    m: Arc<Mutex<HashMap<u64, Vec<Transform>>>>,
-) -> Result<(), String> {
+    socket: Arc<UdpSocket>,
+    tx: UnboundedSender<Result<Packet, ReceiveError>>,
+) {
     loop {
         const MAX_DATAGRAM_SIZE: usize = 65_507;
         let mut buf = [0u8; MAX_DATAGRAM_SIZE];
-        let len = s.recv(&mut buf).await.map_err(|e| e.to_string())?;
+        let len = match socket.recv(&mut buf).await {
+            Ok(len) => len,
+            Err(e) => {
+                let _res = tx.send(Err(ReceiveError::Io(e)));
+                return;
+            }
+        };
 
-        let packet = ike_parser::v1::parse_packet(&buf[..len]).map_err(|e| e.to_string())?;
-
-        trace!("{packet:#?}");
-
-        if let Some(sa) = packet.security_associations.first() {
-            if let Some(prop) = sa.proposal_payload.first() {
-                if let Some(transform) = prop.transforms.first() {
-                    let mut t = vec![];
-                    for attribute in &transform.sa_attributes {
-                        t.push(format_attribute(attribute));
-                    }
-                    info!("Found valid transformation:\n\t{}", t.join("\n\t"));
+        match isakmp::v1::parser::parse_packet(&buf[..len]) {
+            Ok(packet) => {
+                if tx.send(Ok(packet)).is_err() {
+                    // Stop loop if we can't send to channel
+                    return;
                 }
             }
-        } else {
-            for not in packet.notification_payloads {
-                if not.notify_message_type == NotifyMessageType::NoProposalChosen {
-                    let cookie = packet.header.initiator_cookie;
-                    debug!("Remove {cookie} from message");
-                    m.lock().unwrap().remove(&cookie);
-                } else {
-                    debug!(
-                        "Other: {:?} - {}",
-                        not.notify_message_type,
-                        String::from_utf8_lossy(&not.notification)
-                    );
+            Err(err) => {
+                if tx.send(Err(ReceiveError::InvalidMessage(err))).is_err() {
+                    // Stop loop if we can't send to channel
+                    return;
                 }
             }
-        }
-
-        if packet.header.exchange_mode == ExchangeType::Base {
-            break;
         }
     }
+}
 
-    Ok(())
+/// Errors that may occur on the receiving side
+#[derive(Debug, Error)]
+pub enum ReceiveError {
+    #[error("{0}")]
+    Io(#[from] io::Error),
+    #[error("Error while parsing message: {0}")]
+    InvalidMessage(#[from] IsakmpParseError),
 }

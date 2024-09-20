@@ -193,19 +193,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
-name = "ike-parser"
-version = "0.1.0"
-dependencies = [
- "isakmp",
- "thiserror",
-]
-
-[[package]]
 name = "ikebuster"
 version = "0.1.0"
 dependencies = [
  "clap",
- "ike-parser",
  "isakmp",
  "itertools",
  "rand",
@@ -225,6 +216,7 @@ checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
 name = "isakmp"
 version = "0.1.0"
 dependencies = [
+ "rand",
  "strum",
  "thiserror",
  "zerocopy",

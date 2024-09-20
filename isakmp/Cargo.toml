@@ -14,3 +14,6 @@ zerocopy = { version = "~0.7", features = ["derive"] }
 
 # Iterate over enums
 strum = { version = "~0.26", features = ["derive"] }
+
+# RNG
+rand = { version = "~0.8" }

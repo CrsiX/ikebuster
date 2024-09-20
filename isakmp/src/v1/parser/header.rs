@@ -1,17 +1,15 @@
 //! Parsers of the header
 
-use isakmp::v1::ExchangeType;
-use isakmp::v1::PayloadType;
-use isakmp::zerocopy::FromBytes;
+use zerocopy::FromBytes;
 
-use crate::v1::definitions::Header;
-use crate::v1::errors::IsakmpParseError;
+use crate::v1::definitions::ExchangeType;
+use crate::v1::definitions::PayloadType;
+use crate::v1::parser::definitions::Header;
+use crate::v1::parser::errors::IsakmpParseError;
 
 /// Parse the header
 pub fn parse_header(buf: &[u8]) -> Result<Header, IsakmpParseError> {
-    const HEADER_SIZE: usize = size_of::<isakmp::v1::Header>();
-
-    let header = isakmp::v1::Header::ref_from_prefix(&buf[..HEADER_SIZE])
+    let header = crate::v1::definitions::Header::ref_from_prefix(buf)
         .ok_or(IsakmpParseError::BufferTooSmall)?;
 
     Ok(Header {

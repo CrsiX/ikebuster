@@ -1,14 +1,13 @@
 //! Parsers for IKEv1
 
-use isakmp::v1::ExchangeType;
-use isakmp::v1::Header;
-use isakmp::v1::PayloadType;
-
-use crate::v1::definitions::Packet;
-use crate::v1::errors::IsakmpParseError;
-use crate::v1::payload::parse_next_payload;
-use crate::v1::payload::GenericPayload;
-use crate::v1::payload::Payload;
+use crate::v1::definitions::ExchangeType;
+use crate::v1::definitions::Header;
+use crate::v1::definitions::PayloadType;
+use crate::v1::parser::definitions::Packet;
+use crate::v1::parser::errors::IsakmpParseError;
+use crate::v1::parser::payload::parse_next_payload;
+use crate::v1::parser::payload::GenericPayload;
+use crate::v1::parser::payload::Payload;
 
 pub mod data_attribute;
 pub mod definitions;
