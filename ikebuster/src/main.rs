@@ -3,6 +3,7 @@ use std::net::IpAddr;
 use std::process::exit;
 use std::time::Duration;
 
+use clap::ArgAction;
 use clap::Parser;
 use ikebuster::ScanOptions;
 use tracing::error;
@@ -40,16 +41,25 @@ pub struct Cli {
     /// The path to write output to. Only used in combination with --json
     #[clap(short, long, default_value_t = String::from("./output_ikebuster.json"))]
     pub output: String,
+
+    /// Set the verbosity of the output
+    #[clap(short, long, action = ArgAction::Count)]
+    pub verbose: u8,
 }
 
 #[tokio::main]
 async fn main() {
-    if env::var("RUST_LOG").is_err() {
+    let cli = Cli::parse();
+
+    if cli.verbose > 0 {
+        match cli.verbose {
+            1 => env::set_var("RUST_LOG", "ikebuster=debug"),
+            _ => env::set_var("RUST_LOG", "ikebuster=trace"),
+        }
+    } else if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
     tracing_subscriber::fmt::init();
-
-    let cli = Cli::parse();
 
     let opts = ScanOptions {
         ip: cli.ip,
