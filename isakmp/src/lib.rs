@@ -6,4 +6,5 @@
 
 pub mod v1;
 
+pub use strum;
 pub use zerocopy;

@@ -593,7 +593,7 @@ pub struct StaticNotificationPayload {
 /// their corresponding values.
 ///
 /// Values in the Private Use range are expected to be DOI-specific values.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum NotifyMessageType {
@@ -634,7 +634,7 @@ pub enum NotifyMessageType {
 }
 
 /// Other types of [NotifyMessageType]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 pub enum NotifyMessageTypeOther {
     /// 31 - 8191
     Reserved,
@@ -810,7 +810,7 @@ pub struct VariableVendorIDPayload {
 /// context in which the Security Association payload is to be evaluated.
 /// Requests for assignments of new domain of interpretation identifiers
 /// must be accompanied by a public specification, such as an Internet RFC.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u32)]
 #[allow(missing_docs)]
 pub enum DomainOfInterpretation {
@@ -820,7 +820,7 @@ pub enum DomainOfInterpretation {
 }
 
 /// Invalid domain of interpretation received
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, Error)]
 #[error("Invalid domain of interpretation received: {0}")]
 pub struct InvalidDomainOfInterpretation(pub u32);
 
@@ -840,7 +840,7 @@ impl TryFrom<u32> for DomainOfInterpretation {
 /// All available encryption algorithms
 ///
 /// Taken from https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::EnumIter)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum EncryptionAlgorithm {
@@ -856,7 +856,7 @@ pub enum EncryptionAlgorithm {
 }
 
 /// Other variants of [EncryptionAlgorithm]
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, Error)]
 pub enum EncryptionAlgorithmOther {
     /// 9 - 65000
     #[error("Unassigned({0})")]
@@ -889,7 +889,7 @@ impl TryFrom<u16> for EncryptionAlgorithm {
 /// Available Hash algorithms
 ///
 /// Taken from https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::EnumIter)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum HashAlgorithm {
@@ -903,7 +903,7 @@ pub enum HashAlgorithm {
 }
 
 /// Other variant of [HashAlgorithm]
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, Error)]
 pub enum HashAlgorithmOther {
     /// 7 - 65000
     #[error("Unassigned({0})")]
@@ -937,7 +937,7 @@ impl TryFrom<u16> for HashAlgorithm {
 /// retrieve as much information as possible
 ///
 /// Taken from https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::EnumIter)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum AuthenticationMethod {
@@ -953,10 +953,12 @@ pub enum AuthenticationMethod {
     ECDSAWithSHA256OnP256Curve = 9,
     ECDSAWithSHA384OnP384Curve = 10,
     ECDSAWithSHA512OnP512Curve = 11,
+    HybridMode = 64221,
+    XAUTH = 65001,
 }
 
 /// Other variants of [AuthenticationMethod]
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, Error)]
 pub enum AuthenticationMethodOther {
     /// 12 - 65000
     #[error("Unassigned({0})")]
@@ -982,7 +984,10 @@ impl TryFrom<u16> for AuthenticationMethod {
             9 => Ok(AuthenticationMethod::ECDSAWithSHA256OnP256Curve),
             10 => Ok(AuthenticationMethod::ECDSAWithSHA384OnP384Curve),
             11 => Ok(AuthenticationMethod::ECDSAWithSHA512OnP512Curve),
-            12..65001 => Err(AuthenticationMethodOther::Unassigned(value)),
+            12..64221 => Err(AuthenticationMethodOther::Unassigned(value)),
+            64221 => Ok(AuthenticationMethod::HybridMode),
+            64222..65001 => Err(AuthenticationMethodOther::Unassigned(value)),
+            65001 => Ok(AuthenticationMethod::XAUTH),
             _ => Err(AuthenticationMethodOther::PrivateUse(value)),
         }
     }
@@ -991,7 +996,7 @@ impl TryFrom<u16> for AuthenticationMethod {
 /// Available Group Descriptions
 ///
 /// Taken from https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::EnumIter)]
 #[repr(u16)]
 #[allow(missing_docs, non_camel_case_types)]
 pub enum GroupDescription {
@@ -1021,7 +1026,7 @@ pub enum GroupDescription {
 }
 
 /// Other variants of [GroupDescription]
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, Error)]
 pub enum GroupDescriptionOther {
     /// 31 - 32767
     #[error("Unassigned({0})")]
@@ -1067,7 +1072,7 @@ impl TryFrom<u16> for GroupDescription {
 }
 
 /// Type of data attributes
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum AttributeType {
@@ -1091,7 +1096,7 @@ pub enum AttributeType {
 }
 
 /// Other variants of [AttributeType]
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, Error)]
 pub enum AttributeTypeOther {
     /// 17 - 16383
     #[error("Unassigned({0})")]
@@ -1130,7 +1135,7 @@ impl TryFrom<u16> for AttributeType {
 }
 
 /// Available group types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[allow(missing_docs)]
 #[repr(u16)]
 pub enum GroupType {
@@ -1141,7 +1146,7 @@ pub enum GroupType {
 }
 
 /// Other values for [GroupType]
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, Error)]
 pub enum GroupTypeOther {
     /// 4 - 65000
     #[error("Unassigned({0})")]
@@ -1171,7 +1176,7 @@ impl TryFrom<u16> for GroupType {
 /// For a given "Life Type" the value of the "Life Duration" attribute defines
 /// the actual length of the SA life -- either a number of seconds, or a number
 /// of kbytes protected.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[allow(missing_docs)]
 #[repr(u16)]
 pub enum LifeType {
@@ -1181,7 +1186,7 @@ pub enum LifeType {
 }
 
 /// Other values for [LifeType]
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, Error)]
 pub enum LifeTypeOther {
     /// 4 - 65000
     #[error("Unassigned({0})")]

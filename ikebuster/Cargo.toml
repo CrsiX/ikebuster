@@ -5,9 +5,33 @@ edition = "2021"
 license = "MIT"
 authors = ["Niklas Pfister <git@omikron.dev>"]
 
+[lib]
+path = "./src/lib.rs"
+name = "ikebuster"
+
+[[bin]]
+path = "./src/main.rs"
+name = "ikebuster"
+
 [dependencies]
+isakmp = { version = "*", path = "../isakmp" }
+ike-parser = { version = "*", path = "../ike-parser" }
+
 # CLI parser
 clap = { version = "~4", features = ["derive"] }
 
+# More iterators
+itertools = { version = "~0.13" }
+
 # Async runtime
 tokio = { version = ">=1.23.1", features = ["full"] }
+
+# Tracing
+tracing = { version = "~0.1" }
+tracing-subscriber = { version = "~0.3" }
+
+# error handling
+thiserror = { version = "~1" }
+
+# RNG
+rand = { version = "~0.8" }
