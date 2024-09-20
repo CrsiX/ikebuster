@@ -105,6 +105,7 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, Box<dyn Error>> {
 
                                         let Ok(transforms) = payload_to_transforms(prop) else {
                                             warn!("Could not retrieve transform from msg: {msg:?}");
+                                            debug!("{msg:?}");
                                             continue;
                                         };
 
@@ -113,6 +114,7 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, Box<dyn Error>> {
 
                                         let Some(all) = open.get(&msg.header.initiator_cookie) else {
                                             warn!("Missing initiator cookie");
+                                            debug!("{msg:?}");
                                             continue;
                                         };
 
