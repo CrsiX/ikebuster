@@ -114,7 +114,7 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, Box<dyn Error>> {
 
                                         let Some(all) = open.get(&msg.header.initiator_cookie) else {
                                             warn!("Missing initiator cookie");
-                                            debug!("{msg:?}");
+                                            trace!("{} :: {:#?}", msg.header.initiator_cookie, open);
                                             continue;
                                         };
 
