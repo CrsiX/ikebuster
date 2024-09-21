@@ -6,14 +6,16 @@ license = "MIT"
 authors = ["Niklas Pfister <git@omikron.dev>"]
 
 [dependencies]
+# RNG
+rand = { version = "~0.8" }
+
+# Serialization library
+serde = { version = "~1", features = ["derive"] }
+
+# Iterate over enums
+strum = { version = "~0.26", features = ["derive"] }
 # Error management
 thiserror = { version = "~1" }
 
 # Zerocost memory manipulation
 zerocopy = { version = "~0.7", features = ["derive"] }
-
-# Iterate over enums
-strum = { version = "~0.26", features = ["derive"] }
-
-# RNG
-rand = { version = "~0.8" }

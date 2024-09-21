@@ -6,6 +6,7 @@ use std::time::Duration;
 use clap::ArgAction;
 use clap::Parser;
 use ikebuster::ScanOptions;
+use owo_colors::OwoColorize;
 use tracing::error;
 use tracing::info;
 
@@ -30,17 +31,13 @@ pub struct Cli {
 
     /// Output the results in a json file
     #[clap(long)]
-    pub json: bool,
+    pub json: Option<String>,
 
     /// The sleep time (in seconds) after a valid transform is found.
     ///
     /// Some servers limit new requests when there are half-open connections
     #[clap(long, default_value_t = 45)]
     pub sleep_on_transform_found: u64,
-
-    /// The path to write output to. Only used in combination with --json
-    #[clap(short, long, default_value_t = String::from("./output_ikebuster.json"))]
-    pub output: String,
 
     /// Set the verbosity of the output
     #[clap(short, long, action = ArgAction::Count)]
@@ -77,8 +74,13 @@ async fn main() {
         }
     };
 
+    if res.valid_transforms.is_empty() {
+        println!("{} No transforms found", "[:(]".yellow());
+    } else {
+        println!("Found transforms:");
+    }
     for valid in res.valid_transforms {
-        info!(
+        println!(
             "ENC={} HASH={} AUTH={} GROUP={}",
             if let Some(key_len) = valid.key_size {
                 format!("{}/{key_len}", valid.encryption_algorithm)

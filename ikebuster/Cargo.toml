@@ -12,25 +12,43 @@ name = "ikebuster"
 [[bin]]
 path = "./src/main.rs"
 name = "ikebuster"
+required-features = ["bin"]
 
 [dependencies]
 isakmp = { version = "*", path = "../isakmp" }
 
 # CLI parser
-clap = { version = "~4", features = ["derive"] }
+clap = { version = "~4", features = ["derive"], optional = true }
 
 # More iterators
 itertools = { version = "~0.13" }
 
-# Async runtime
-tokio = { version = ">=1.23.1", features = ["full"] }
+# Colors!
+owo-colors = { version = "~4", optional = true }
 
-# Tracing
-tracing = { version = "~0.1" }
-tracing-subscriber = { version = "~0.3" }
+# RNG
+rand = { version = "~0.8" }
+
+# Serialization library
+serde = { version = "~1", features = ["derive"] }
+serde_json = { version = "~1", optional = true }
 
 # error handling
 thiserror = { version = "~1" }
 
-# RNG
-rand = { version = "~0.8" }
+# Async runtime
+tokio = { version = ">=1.23.1", features = ["rt-multi-thread", "macros", "net", "sync", "time"] }
+
+# Tracing
+tracing = { version = "~0.1" }
+tracing-subscriber = { version = "~0.3", optional = true }
+
+
+
+[features]
+bin = [
+    "dep:clap",
+    "dep:owo-colors",
+    "dep:serde_json",
+    "dep:tracing-subscriber",
+]

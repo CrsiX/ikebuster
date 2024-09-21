@@ -1,5 +1,7 @@
 //! Message generation
 
+use serde::Deserialize;
+use serde::Serialize;
 use zerocopy::network_endian::*;
 use zerocopy::AsBytes;
 use zerocopy::U16;
@@ -26,7 +28,7 @@ use crate::v1::definitions::VariableTransformPayload;
 ///
 /// A transform consists of multiple attributes that determine the encryption and authentication
 /// that should be used
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Transform {
     /// Encryption algorithm
     pub encryption_algorithm: EncryptionAlgorithm,

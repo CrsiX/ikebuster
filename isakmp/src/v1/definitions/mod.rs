@@ -6,6 +6,8 @@
 //! - https://www.rfc-editor.org/rfc/rfc2409.html
 //! - https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
 
+use serde::Deserialize;
+use serde::Serialize;
 use thiserror::Error;
 use zerocopy::network_endian::*;
 use zerocopy::AsBytes;
@@ -840,7 +842,9 @@ impl TryFrom<u32> for DomainOfInterpretation {
 /// All available encryption algorithms
 ///
 /// Taken from https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::EnumIter, strum::Display)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum EncryptionAlgorithm {
@@ -889,7 +893,9 @@ impl TryFrom<u16> for EncryptionAlgorithm {
 /// Available Hash algorithms
 ///
 /// Taken from https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::EnumIter, strum::Display)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum HashAlgorithm {
@@ -937,7 +943,9 @@ impl TryFrom<u16> for HashAlgorithm {
 /// retrieve as much information as possible
 ///
 /// Taken from https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::EnumIter, strum::Display)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum AuthenticationMethod {
@@ -996,7 +1004,9 @@ impl TryFrom<u16> for AuthenticationMethod {
 /// Available Group Descriptions
 ///
 /// Taken from https://www.iana.org/assignments/ipsec-registry/ipsec-registry.xhtml
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::EnumIter, strum::Display)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
 #[allow(missing_docs, non_camel_case_types)]
 pub enum GroupDescription {
@@ -1072,7 +1082,9 @@ impl TryFrom<u16> for GroupDescription {
 }
 
 /// Type of data attributes
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy, strum::Display)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum AttributeType {
