@@ -4,6 +4,12 @@
 
 A simple utility to report insecure configurations on IKE.
 
+## Installation
+
+```bash
+cargo install ikebuster -F bin
+```
+
 ## Usage
 
 By default, `ikebuster` will try to bruteforce all combinations of:
