@@ -6,7 +6,7 @@
 [![Crates.io Version](https://img.shields.io/crates/v/ikebuster)](https://crates.io/crates/ikebuster)
 [![crates io downloads](https://img.shields.io/crates/d/ikebuster)](https://crates.io/crates/ikebuster)
 [![docs.rs](https://img.shields.io/docsrs/ikebuster)](https://docs.rs/ikebuster/latest/ikebuster/)
-[![ci](https://img.shields.io/github/actions/workflow/status/myOmikron/ikebuster/linux.yml?label=Backend)](https://github.com/myOmikron/ikebuster/actions/workflows/linux.yml)
+[![ci](https://img.shields.io/github/actions/workflow/status/myOmikron/ikebuster/linux.yml?label=CI)](https://github.com/myOmikron/ikebuster/actions/workflows/linux.yml)
 
 A simple utility to report insecure configurations on IKE.
 
