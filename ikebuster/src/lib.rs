@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::error::Error;
+use std::io;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -15,6 +15,7 @@ use std::time::Duration;
 use isakmp::v1::definitions::NotifyMessageType;
 use isakmp::v1::generator::MessageBuilder;
 use isakmp::v1::generator::Transform;
+use thiserror::Error;
 use tokio::net::UdpSocket;
 use tokio::select;
 use tokio::sync::mpsc;
@@ -60,16 +61,20 @@ pub struct ScanOptions {
 
 /// Scan the provided ip address
 #[instrument(skip_all)]
-pub async fn scan(opts: ScanOptions) -> Result<ScanResult, Box<dyn Error>> {
+pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
     // Initialize udp socket
     let addr = SocketAddr::new(opts.ip, opts.port);
 
     info!("Binding and starting to scan {addr}");
     let socket = Arc::new(match addr.ip() {
-        IpAddr::V4(_) => UdpSocket::bind("0.0.0.0:500").await?,
-        IpAddr::V6(_) => UdpSocket::bind("[::]:500").await?,
+        IpAddr::V4(_) => UdpSocket::bind("0.0.0.0:500")
+            .await
+            .map_err(ScanError::CouldNotBind)?,
+        IpAddr::V6(_) => UdpSocket::bind("[::]:500")
+            .await
+            .map_err(ScanError::CouldNotBind)?,
     });
-    socket.connect(&addr).await?;
+    socket.connect(&addr).await.map_err(ScanError::Receive)?;
 
     let (tx, mut rx) = mpsc::unbounded_channel();
     let mut interval = interval(Duration::from_millis(opts.interval));
@@ -159,7 +164,7 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, Box<dyn Error>> {
                         Err(err) => match err {
                             ReceiveError::Io(err) => {
                                 error!("Error in receiving side: {err}");
-                                return Err(Box::new(err))
+                                return Err(ScanError::Receive(err));
                             }
                             ReceiveError::InvalidMessage(err) => {
                                 trace!("Could not parse incoming message: {err}");
@@ -202,11 +207,23 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, Box<dyn Error>> {
                         }
 
                         open.insert(initiator_cookie, transforms);
-                        socket.send(&msg).await?;
+                        socket.send(&msg).await.map_err(ScanError::Send)?;
 
                     }}
 
             }
         }
     }
+}
+
+/// Errors that may occur while scanning
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum ScanError {
+    #[error("Could not bind: {0}")]
+    CouldNotBind(io::Error),
+    #[error("Could not recv: {0}")]
+    Receive(io::Error),
+    #[error("Could not send: {0}")]
+    Send(io::Error),
 }
