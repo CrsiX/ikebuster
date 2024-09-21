@@ -16,7 +16,7 @@ name = "ikebuster"
 required-features = ["bin"]
 
 [dependencies]
-isakmp = { version = "*", path = "../isakmp" }
+isakmp = { version = "~0.1", path = "../isakmp" }
 
 # CLI parser
 clap = { version = "~4", features = ["derive"], optional = true }
