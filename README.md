@@ -2,6 +2,11 @@
 
 # ikebuster
 
+[![Crates.io License](https://img.shields.io/crates/l/MIT)](https://github.com/myOmikron/ikebuster/blob/main/LICENSE)
+[![Crates.io Version](https://img.shields.io/crates/v/ikebuster)](https://crates.io/crates/ikebuster)
+[![crates io downloads](https://img.shields.io/crates/d/ikebuster)](https://crates.io/crates/ikebuster)
+[![docs.rs](https://img.shields.io/docsrs/ikebuster)](https://docs.rs/ikebuster/latest/ikebuster/)
+
 A simple utility to report insecure configurations on IKE.
 
 ## Installation
