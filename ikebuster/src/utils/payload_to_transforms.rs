@@ -61,13 +61,13 @@ pub fn payload_to_transforms(
                 DataAttribute::DataAttributeLong(attr) => {
                     let a = attr
                         .attribute_value
-                        .get(0)
-                        .map(|x| *x)
+                        .first()
+                        .copied()
                         .ok_or(InvalidTransform)?;
                     let b = attr
                         .attribute_value
                         .get(1)
-                        .map(|x| *x)
+                        .copied()
                         .ok_or(InvalidTransform)?;
 
                     let value = u16::from_be_bytes([a, b]);
@@ -102,10 +102,10 @@ pub fn payload_to_transforms(
         }
 
         v.push(Transform {
-            encryption_algorithm: encryption_algorithm.ok_or_else(|| InvalidTransform)?,
-            hash_algorithm: hash_algorithm.ok_or_else(|| InvalidTransform)?,
-            authentication_method: authentication_method.ok_or_else(|| InvalidTransform)?,
-            group_description: group_description.ok_or_else(|| InvalidTransform)?,
+            encryption_algorithm: encryption_algorithm.ok_or(InvalidTransform)?,
+            hash_algorithm: hash_algorithm.ok_or(InvalidTransform)?,
+            authentication_method: authentication_method.ok_or(InvalidTransform)?,
+            group_description: group_description.ok_or(InvalidTransform)?,
             key_size,
         });
     }
