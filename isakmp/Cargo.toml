@@ -8,15 +8,15 @@ description = "Protocol implementation of isakmp"
 
 [dependencies]
 # RNG
-rand = { version = "~0.8" }
+rand = { version = "~0.9" }
 
 # Serialization library
 serde = { version = "~1", features = ["derive"] }
 
 # Iterate over enums
-strum = { version = "~0.26", features = ["derive"] }
+strum = { version = "~0.27", features = ["derive"] }
 # Error management
-thiserror = { version = "~1" }
+thiserror = { version = "~2" }
 
 # Zerocost memory manipulation
 zerocopy = { version = "~0.7", features = ["derive"] }

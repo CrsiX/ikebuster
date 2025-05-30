@@ -23,20 +23,17 @@ isakmp = { version = "~0.1", path = "../isakmp" }
 clap = { version = "~4", features = ["derive"], optional = true }
 
 # More iterators
-itertools = { version = "~0.13" }
+itertools = { version = "~0.14" }
 
 # Colors!
 owo-colors = { version = "~4", optional = true }
-
-# RNG
-rand = { version = "~0.8" }
 
 # Serialization library
 serde = { version = "~1", features = ["derive"] }
 serde_json = { version = "~1", optional = true }
 
 # error handling
-thiserror = { version = "~1" }
+thiserror = { version = "~2" }
 
 # Async runtime
 tokio = { version = ">=1.23.1", features = ["rt-multi-thread", "macros", "net", "sync", "time"] }
