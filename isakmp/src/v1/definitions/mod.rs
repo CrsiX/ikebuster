@@ -20,7 +20,7 @@ use zerocopy::Unaligned;
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.1
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct Header {
     /// Cookie of entity that initiated SA establishment, SA notification, or SA deletion.
     pub initiator_cookie: U64,
@@ -170,7 +170,7 @@ impl TryFrom<u8> for ExchangeType {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.2
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct GenericPayloadHeader {
     /// Identifier for the payload type of the next payload in the message.
     /// If the current payload is the last in the message, then this field will be 0.
@@ -187,7 +187,7 @@ pub struct GenericPayloadHeader {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.3
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct DataAttributeShort {
     /// Unique identifier for each type of attribute.
     /// These attributes are defined as part of the DOI-specific information.
@@ -206,7 +206,7 @@ pub struct DataAttributeShort {
 /// For more information take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.3
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticDataAttributeLong {
     /// Unique identifier for each type of attribute.
     /// These attributes are defined as part of the DOI-specific information.
@@ -232,7 +232,7 @@ pub struct VariableDataAttributeLong {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.4
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticSecurityAssociationPayload {
     /// Generic header
     pub generic_payload_header: GenericPayloadHeader,
@@ -255,7 +255,7 @@ pub struct VariableSecurityAssociationPayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.5
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticProposalPayload {
     /// Generic header
     pub generic_payload_header: GenericPayloadHeader,
@@ -298,7 +298,7 @@ pub struct VariableProposalPayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.6
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticTransformPayload {
     /// Generic header
     pub generic_payload_header: GenericPayloadHeader,
@@ -330,7 +330,7 @@ pub struct VariableTransformPayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.7
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticKeyExchangePayload {
     /// Generic header
     pub generic_payload_header: GenericPayloadHeader,
@@ -352,7 +352,7 @@ pub struct VariableKeyExchangePayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.8
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticIdentificationPayload {
     /// Generic header
     pub generic_payload_header: GenericPayloadHeader,
@@ -378,7 +378,7 @@ pub struct VariableIdentificationPayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.9
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticCertificatePayload {
     /// Generic header
     pub generic_payload_header: GenericPayloadHeader,
@@ -457,7 +457,7 @@ pub struct VariableCertificatePayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.10
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticCertificateRequestPayload {
     /// Generic header
     pub generic_payload_header: GenericPayloadHeader,
@@ -492,7 +492,7 @@ pub struct VariableCertificateRequestPayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.11
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticHashPayload {
     /// Generic payload
     pub generic_payload_header: GenericPayloadHeader,
@@ -513,7 +513,7 @@ pub struct VariableHashPayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.12
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticSignaturePayload {
     /// Generic payload
     pub generic_payload_header: GenericPayloadHeader,
@@ -535,7 +535,7 @@ pub struct VariableSignaturePayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.13
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticNoncePayload {
     /// Generic payload
     pub generic_payload_header: GenericPayloadHeader,
@@ -566,7 +566,7 @@ pub struct VariableNoncePayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.14
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticNotificationPayload {
     /// Generic payload
     pub generic_payload_header: GenericPayloadHeader,
@@ -726,7 +726,7 @@ pub struct VariableNotificationPayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.15
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticDeletePayload {
     /// Generic payload
     pub generic_payload_header: GenericPayloadHeader,
@@ -795,7 +795,7 @@ pub struct VariableDeletePayload {
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.16
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct StaticVendorIDPayload {
     /// Generic payload
     pub generic_payload_header: GenericPayloadHeader,
