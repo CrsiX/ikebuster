@@ -135,7 +135,7 @@ pub enum ExchangeType {
     Informational = 5,
 }
 
-/// Other payload types of [PayloadType] that can't be defined by Rusts enum
+/// Other types of [ExchangeType] that can't be defined by Rusts enum
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum ExchangeTypeOther {
