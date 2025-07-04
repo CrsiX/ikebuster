@@ -368,7 +368,7 @@ pub struct VariableIdentificationPayload {
     pub identification_data: Vec<u8>,
 }
 
-///  The Certificate Payload provides a means to transport certificates or other certificate-related
+/// The Certificate Payload provides a means to transport certificates or other certificate-related
 /// information via ISAKMP and can appear in any ISAKMP message. Certificate payloads SHOULD be
 /// included in an exchange whenever an appropriate directory service (e.g.  Secure DNS
 /// [DNSSEC](https://datatracker.ietf.org/doc/html/rfc2408#ref-DNSSEC)) is not available to
@@ -853,7 +853,7 @@ pub enum EncryptionAlgorithm {
     IDEA_CBC = 2,
     BlowfishCBC = 3,
     RC5_R16_B64_CBC = 4,
-    TrippleDES_CBC = 5,
+    TripleDES_CBC = 5,
     CAST_CBC = 6,
     AES_CBC = 7,
     CAMELLIA_CBC = 8,
@@ -880,7 +880,7 @@ impl TryFrom<u16> for EncryptionAlgorithm {
             2 => Ok(EncryptionAlgorithm::IDEA_CBC),
             3 => Ok(EncryptionAlgorithm::BlowfishCBC),
             4 => Ok(EncryptionAlgorithm::RC5_R16_B64_CBC),
-            5 => Ok(EncryptionAlgorithm::TrippleDES_CBC),
+            5 => Ok(EncryptionAlgorithm::TripleDES_CBC),
             6 => Ok(EncryptionAlgorithm::CAST_CBC),
             7 => Ok(EncryptionAlgorithm::AES_CBC),
             8 => Ok(EncryptionAlgorithm::CAMELLIA_CBC),

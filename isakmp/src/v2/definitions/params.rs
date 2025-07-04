@@ -3,6 +3,8 @@
 
 use super::UnparseableParameter;
 
+use serde::{Deserialize, Serialize};
+
 /// Type of the exchanged being used
 ///
 /// This constrains the payloads sent in each message in an exchange.
@@ -20,7 +22,7 @@ pub enum ExchangeType {
     CreateChildSa = 36,
     // RFC 7296
     Informational = 37,
-    // RFC5723
+    // RFC 5723
     IkeSessionResume = 38,
     // draft-ietf-ipsecme-g-ikev2-22
     GsaAuth = 39,
@@ -30,9 +32,9 @@ pub enum ExchangeType {
     GsaRekey = 41,
     // draft-ietf-ipsecme-g-ikev2-22
     GsaInbandRekey = 42,
-    // RFC9242
+    // RFC 9242
     IkeIntermediate = 43,
-    // RFC9370
+    // RFC 9370
     IkeFollowupKeyExchange = 44,
 }
 
@@ -215,16 +217,340 @@ impl TryFrom<u8> for TransformType {
     }
 }
 
-// TODO: IKEv2 Transform Attribute Types
-// TODO: Transform Type 1 - Encryption Algorithm Transform IDs
-// TODO: Transform Type 2 - Pseudorandom Function Transform IDs
-// TODO: Transform Type 3 - Integrity Algorithm Transform IDs
-// TODO: Transform Type 4 - Key Exchange Method Transform IDs
-// TODO: Transform Type 5 - Sequence Numbers Transform IDs
-// TODO: Transform Type 13 - Key Wrap Algorithm Transform IDs
-// TODO: Transform Type 14 - Group Controller Authentication Method Transform IDs
+/// Values for attribute types used to describe extra data for any transformation
+///
+/// Values 0-13 and 15-17 are reserved, 19-16383 are unassigned and
+/// 16384-32767 reserved for private use.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u16)]
+#[allow(missing_docs)]
+pub enum AttributeType {
+    KeyLength = 14,
+    SignatureAlgorithm = 18,
+}
 
-// TODO: IKEv2 Identification Payload ID Types
+impl TryFrom<u16> for AttributeType {
+    type Error = UnparseableParameter;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0..=13 => Err(UnparseableParameter::Reserved),
+            14 => Ok(AttributeType::KeyLength),
+            15..=17 => Err(UnparseableParameter::Reserved),
+            18 => Ok(AttributeType::SignatureAlgorithm),
+            19..=16383 => Err(UnparseableParameter::Reserved),
+            16384..=32767 => Err(UnparseableParameter::Reserved),
+            32768..=65535 => Err(UnparseableParameter::OutOfRange),
+        }
+    }
+}
+
+/// Values for valid encryption algorithm transformations
+///
+/// Values 0, 10 and 22 are reserved, 17 and 36-1023 are unassigned
+/// and 1024-65535 are reserved for private use. See also [UnparseableParameter].
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u16)]
+#[allow(missing_docs)]
+pub enum EncryptionAlgorithm {
+    DesIv64 = 1, // deprecated
+    Des = 2,     // deprecated
+    TripleDes = 3,
+    Rc5 = 4,        // deprecated
+    Idea = 5,       // deprecated
+    Cast = 6,       // deprecated
+    Blowfish = 7,   // deprecated
+    TripleIdea = 8, // deprecated
+    DesIv32 = 9,    // deprecated
+    Null = 11,      // not allowed
+    AesCbc = 12,
+    AesCtr = 13,
+    AesCcm8 = 14,
+    AesCcm12 = 15,
+    AesCcm16 = 16,
+    AesGcm8 = 18,
+    AesGcm12 = 19,
+    AesGcm16 = 20,
+    NullAuthAesGmac = 21, // not allowed
+    CamelliaCbc = 23,
+    CamelliaCtr = 24,
+    CamelliaCcm8 = 25,
+    CamelliaCcm12 = 26,
+    CamelliaCcm16 = 27,
+    Chacha20Poly1305 = 28,
+    AesCcm8IIV = 29,          // not allowed
+    AesGcm16IIV = 30,         // not allowed
+    Chacha20Poly1305IIV = 31, // not allowed
+    KuznyechikMgmKTree = 32,
+    MagmaMgmKTree = 33,
+    KuznyechikMgmMacKTree = 34, // not allowed
+    MagmaMgmMacKTree = 35,      // not allowed
+}
+
+impl TryFrom<u16> for EncryptionAlgorithm {
+    type Error = UnparseableParameter;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Err(UnparseableParameter::Reserved),
+            1 => Ok(EncryptionAlgorithm::DesIv64),
+            2 => Ok(EncryptionAlgorithm::Des),
+            3 => Ok(EncryptionAlgorithm::TripleDes),
+            4 => Ok(EncryptionAlgorithm::Rc5),
+            5 => Ok(EncryptionAlgorithm::Idea),
+            6 => Ok(EncryptionAlgorithm::Cast),
+            7 => Ok(EncryptionAlgorithm::Blowfish),
+            8 => Ok(EncryptionAlgorithm::TripleIdea),
+            9 => Ok(EncryptionAlgorithm::DesIv32),
+            10 => Err(UnparseableParameter::Reserved),
+            11 => Ok(EncryptionAlgorithm::Null),
+            12 => Ok(EncryptionAlgorithm::AesCbc),
+            13 => Ok(EncryptionAlgorithm::AesCtr),
+            14 => Ok(EncryptionAlgorithm::AesCcm8),
+            15 => Ok(EncryptionAlgorithm::AesCcm12),
+            16 => Ok(EncryptionAlgorithm::AesCcm16),
+            17 => Err(UnparseableParameter::Unassigned),
+            18 => Ok(EncryptionAlgorithm::AesGcm8),
+            19 => Ok(EncryptionAlgorithm::AesGcm12),
+            20 => Ok(EncryptionAlgorithm::AesGcm16),
+            21 => Ok(EncryptionAlgorithm::NullAuthAesGmac),
+            22 => Err(UnparseableParameter::Reserved),
+            23 => Ok(EncryptionAlgorithm::CamelliaCbc),
+            24 => Ok(EncryptionAlgorithm::CamelliaCtr),
+            25 => Ok(EncryptionAlgorithm::CamelliaCcm8),
+            26 => Ok(EncryptionAlgorithm::CamelliaCcm12),
+            27 => Ok(EncryptionAlgorithm::CamelliaCcm16),
+            28 => Ok(EncryptionAlgorithm::Chacha20Poly1305),
+            29 => Ok(EncryptionAlgorithm::AesCcm8IIV),
+            30 => Ok(EncryptionAlgorithm::AesGcm16IIV),
+            31 => Ok(EncryptionAlgorithm::Chacha20Poly1305IIV),
+            32 => Ok(EncryptionAlgorithm::KuznyechikMgmKTree),
+            33 => Ok(EncryptionAlgorithm::MagmaMgmKTree),
+            34 => Ok(EncryptionAlgorithm::KuznyechikMgmMacKTree),
+            35 => Ok(EncryptionAlgorithm::MagmaMgmMacKTree),
+            36..=1023 => Err(UnparseableParameter::Unassigned),
+            1024..=65535 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
+}
+
+/// Values for valid pseudorandom functions used in transformations
+///
+/// To find out requirement levels for PRFs for IKEv2, see RFC 8247.
+/// Values 0 is reserved, 10-1023 are unassigned and 1024-65535 reserved for private use.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u16)]
+#[allow(missing_docs)]
+pub enum PseudorandomFunction {
+    HmacMd5 = 1, // deprecated
+    HmacSha1 = 2,
+    HmacTiger = 3, // deprecated
+    Aes128Xcbc = 4,
+    HmacSha2_256 = 5,
+    HmacSha2_384 = 6,
+    HmacSha2_512 = 7,
+    Aes128Cmac = 8,
+    HmacStreebog512 = 9,
+}
+
+impl TryFrom<u16> for PseudorandomFunction {
+    type Error = UnparseableParameter;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Err(UnparseableParameter::Reserved),
+            1 => Ok(PseudorandomFunction::HmacMd5),
+            2 => Ok(PseudorandomFunction::HmacSha1),
+            3 => Ok(PseudorandomFunction::HmacTiger),
+            4 => Ok(PseudorandomFunction::Aes128Xcbc),
+            5 => Ok(PseudorandomFunction::HmacSha2_256),
+            6 => Ok(PseudorandomFunction::HmacSha2_384),
+            7 => Ok(PseudorandomFunction::HmacSha2_512),
+            8 => Ok(PseudorandomFunction::Aes128Cmac),
+            9 => Ok(PseudorandomFunction::HmacStreebog512),
+            10..=1023 => Err(UnparseableParameter::Unassigned),
+            1024..=65535 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
+}
+
+/// Values for valid integrity algorithms used in transformations
+///
+/// To find out requirement levels for encryption algorithms for
+/// ESP/AH, see RFC 8221. For IKEv2, see RFC 8247.
+/// Values 15-1023 are unassigned and 1024-65535 reserved for private use.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u16)]
+#[allow(missing_docs)]
+pub enum IntegrityAlgorithm {
+    None = 0,
+    HmacMd5_96 = 1, // deprecated
+    HmacSha1_96 = 2,
+    DesMac = 3,  // deprecated
+    KpdkMd5 = 4, // deprecated
+    AesXcbc96 = 5,
+    HmacMd5_128 = 6,  // deprecated
+    HmacSha1_160 = 7, // deprecated
+    AesCmac96 = 8,
+    Aes128Gmac = 9,
+    Aes192Gmac = 10,
+    Aes256Gmac = 11,
+    HmacSha2_256_128 = 12,
+    HmacSha2_384_192 = 13,
+    HmacSha2_512_256 = 14,
+}
+
+impl TryFrom<u16> for IntegrityAlgorithm {
+    type Error = UnparseableParameter;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(IntegrityAlgorithm::None),
+            1 => Ok(IntegrityAlgorithm::HmacMd5_96),
+            2 => Ok(IntegrityAlgorithm::HmacSha1_96),
+            3 => Ok(IntegrityAlgorithm::DesMac),
+            4 => Ok(IntegrityAlgorithm::KpdkMd5),
+            5 => Ok(IntegrityAlgorithm::AesXcbc96),
+            6 => Ok(IntegrityAlgorithm::HmacMd5_128),
+            7 => Ok(IntegrityAlgorithm::HmacSha1_160),
+            8 => Ok(IntegrityAlgorithm::AesCmac96),
+            9 => Ok(IntegrityAlgorithm::Aes128Gmac),
+            10 => Ok(IntegrityAlgorithm::Aes192Gmac),
+            11 => Ok(IntegrityAlgorithm::Aes256Gmac),
+            12 => Ok(IntegrityAlgorithm::HmacSha2_256_128),
+            13 => Ok(IntegrityAlgorithm::HmacSha2_384_192),
+            14 => Ok(IntegrityAlgorithm::HmacSha2_512_256),
+            15..=1023 => Err(UnparseableParameter::Unassigned),
+            1024..=65535 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
+}
+
+/// Values for valid key exchange methods used in transformations
+///
+/// This registry was originally named "Transform Type 4 -
+/// Diffie-Hellman Group Transform IDs" and was referenced
+/// using that name in a number of RFCs published prior to
+/// RFC 9370, which gave it its current title.
+///
+/// This registry is used by the "Key Exchange Method (KE)"
+/// transform type and by all "Additional Key Exchange (ADDKE)"
+/// transform types. To find out requirement levels for key
+/// exchange methods for IKEv2, see RFC 8247.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u16)]
+#[allow(missing_docs)]
+pub enum KeyExchangeMethod {
+    None = 0,
+    ModP768 = 1, // deprecated
+    ModP1024 = 2,
+    ModP1536 = 5,
+    ModP2048 = 14,
+    ModP3072 = 15,
+    ModP4096 = 16,
+    ModP6144 = 17,
+    ModP8192 = 18,
+    EcpGroup256 = 19,
+    EcpGroup384 = 20,
+    EcpGroup521 = 21,
+    ModP1024with160Prime = 22, // deprecated
+    ModP2048with224Prime = 23,
+    ModP2048with256Prime = 24,
+    EcpGroup192 = 25,
+    EcpGroup224 = 26,
+    BrainPoolP224 = 27,
+    BrainPoolP256 = 28,
+    BrainPoolP384 = 29,
+    BrainPoolP512 = 30,
+    Curve25519 = 31,
+    Curve448 = 32,
+    Gost310_256 = 33,
+    Gost310_512 = 34,
+    MlKem512 = 35,
+    MlKem768 = 36,
+    MlKem1024 = 37,
+}
+
+impl TryFrom<u16> for KeyExchangeMethod {
+    type Error = UnparseableParameter;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(KeyExchangeMethod::None),
+            1 => Ok(KeyExchangeMethod::ModP768),
+            2 => Ok(KeyExchangeMethod::ModP1024),
+            3..=4 => Err(UnparseableParameter::Reserved),
+            5 => Ok(KeyExchangeMethod::ModP1536),
+            6..=13 => Err(UnparseableParameter::Unassigned),
+            14 => Ok(KeyExchangeMethod::ModP2048),
+            15 => Ok(KeyExchangeMethod::ModP3072),
+            16 => Ok(KeyExchangeMethod::ModP4096),
+            17 => Ok(KeyExchangeMethod::ModP6144),
+            18 => Ok(KeyExchangeMethod::ModP8192),
+            19 => Ok(KeyExchangeMethod::EcpGroup256),
+            20 => Ok(KeyExchangeMethod::EcpGroup384),
+            21 => Ok(KeyExchangeMethod::EcpGroup521),
+            22 => Ok(KeyExchangeMethod::ModP1024with160Prime),
+            23 => Ok(KeyExchangeMethod::ModP2048with224Prime),
+            24 => Ok(KeyExchangeMethod::ModP2048with256Prime),
+            25 => Ok(KeyExchangeMethod::EcpGroup192),
+            26 => Ok(KeyExchangeMethod::EcpGroup224),
+            27 => Ok(KeyExchangeMethod::BrainPoolP224),
+            28 => Ok(KeyExchangeMethod::BrainPoolP256),
+            29 => Ok(KeyExchangeMethod::BrainPoolP384),
+            30 => Ok(KeyExchangeMethod::BrainPoolP512),
+            31 => Ok(KeyExchangeMethod::Curve25519),
+            32 => Ok(KeyExchangeMethod::Curve448),
+            33 => Ok(KeyExchangeMethod::Gost310_256),
+            34 => Ok(KeyExchangeMethod::Gost310_512),
+            35 => Ok(KeyExchangeMethod::MlKem512),
+            36 => Ok(KeyExchangeMethod::MlKem768),
+            37 => Ok(KeyExchangeMethod::MlKem1024),
+            38..=1023 => Err(UnparseableParameter::Unassigned),
+            1024..=65535 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
+}
+
+/// Values for sequence number types
+///
+/// The default is likely to be [SequenceNumberType::Sequential32bit],
+/// as it was originally called "No Extended Sequence Numbers".
+/// Values 3-1023 are unassigned and 1024-65535 are reserved for private use.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u16)]
+#[allow(missing_docs)]
+pub enum SequenceNumberType {
+    Sequential32bit = 0,
+    PartiallyTransmitted64bit = 1,
+    Unspecified32bit = 2,
+}
+
+impl TryFrom<u16> for SequenceNumberType {
+    type Error = UnparseableParameter;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(SequenceNumberType::Sequential32bit),
+            1 => Ok(SequenceNumberType::PartiallyTransmitted64bit),
+            2 => Ok(SequenceNumberType::Unspecified32bit),
+            3..=1023 => Err(UnparseableParameter::Unassigned),
+            1024..=65535 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
+}
 
 /// Indicator for the encoding of certificates and related data
 ///
@@ -395,14 +721,60 @@ impl TryFrom<u16> for NotifyErrorMessageType {
 
 // TODO: IKEv2 Notification IPCOMP Transform IDs (Value 16387)
 
-// TODO: IKEv2 Security Protocol Identifiers
+/// Values for the security protocol identifiers
+///
+/// These are used in a proposal to specify the type of protocol to use
+/// to negotiate the Security Association.
+/// Values 7-200 are unassigned and 201-255 reserved for private use.
+///
+/// In this project, only [SecurityProtocol::InternetKeyExchange] is relevant.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u8)]
+#[allow(missing_docs)]
+pub enum SecurityProtocol {
+    InternetKeyExchange = 1,
+    AuthenticationHeader = 2,
+    EncapsulatingSecurityPayload = 3,
+    FcEncapsulatingSecurityPayloadHeader = 4,
+    FcCtAuthentication = 5,
+    GroupIKEUpdate = 6,
+}
 
-// TODO: IKEv2 Traffic Selector Types
+/// Values for the hash algorithm identifier
+///
+/// Values 0 are reserved, 8-1023 unassigned and 1024-65535 reserved for private use.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u8)]
+#[allow(missing_docs)]
+pub enum HashAlgorithm {
+    Sha1 = 1,
+    Sha2_256 = 2,
+    Sha2_384 = 3,
+    Sha2_512 = 4,
+    Identity = 5,
+    Streebog256 = 6,
+    Streebog512 = 7,
+}
 
-// TODO: IKEv2 Configuration Payload CFG Types
+impl TryFrom<u16> for HashAlgorithm {
+    type Error = UnparseableParameter;
 
-// TODO: IKEv2 Configuration Payload Attribute Types
-
-// TODO: IKEv2 Gateway Identity Types
-
-// TODO: IKEv2 Hash Algorithms
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Err(UnparseableParameter::Reserved),
+            1 => Ok(HashAlgorithm::Sha1),
+            2 => Ok(HashAlgorithm::Sha2_256),
+            3 => Ok(HashAlgorithm::Sha2_384),
+            4 => Ok(HashAlgorithm::Sha2_512),
+            5 => Ok(HashAlgorithm::Identity),
+            6 => Ok(HashAlgorithm::Streebog256),
+            7 => Ok(HashAlgorithm::Streebog512),
+            8..=1023 => Err(UnparseableParameter::Unassigned),
+            1024..=65535 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
+}
