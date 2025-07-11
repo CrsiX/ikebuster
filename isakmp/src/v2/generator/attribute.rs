@@ -5,7 +5,7 @@ use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
 
 impl Attribute {
-    fn build(&self) -> Vec<u8> {
+    pub(crate) fn build(&self) -> Vec<u8> {
         match self {
             Attribute::KeyLength(length) => Vec::from(
                 AttributeHeaderTV {
