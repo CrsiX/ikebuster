@@ -8,7 +8,7 @@ impl Transform {
     ///
     /// The argument `last` defines if any transform is following this transform (false)
     /// or if this transform is the last transform in the proposal payload (true).
-    fn build(&self, last: bool) -> Vec<u8> {
+    pub fn build(&self, last: bool) -> Vec<u8> {
         let (t_type, t_id, attributes) = match self {
             Transform::Encryption((algorithm, attribute)) => (
                 TransformType::EncryptionAlgorithm,

@@ -5,7 +5,7 @@ pub use super::super::v1::definitions::GenericPayloadHeader;
 pub use super::super::v1::definitions::Header;
 use params::{
     EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod, PayloadType,
-    PseudorandomFunction, SequenceNumberType, TransformType,
+    PseudorandomFunction, SecurityProtocol, SequenceNumberType, TransformType,
 };
 
 /// When parsing a parameter from u8, there are several "regions" in the definitions
@@ -109,6 +109,13 @@ pub struct SecurityAssociation {
 /// permissible transforms is assigned Transform ID numbers, which appear
 /// in the header of each transform.
 pub struct Proposal {
+    /// Identifier for the security protocol to be used in this proposal,
+    /// must be [SecurityProtocol::InternetKeyExchange] to work in this project
+    pub protocol: SecurityProtocol,
+    /// Optional sending entity's SPI (Security Parameter Index), currently not used
+    /// for scanning and not needed to be duplicated from the [SecurityAssociation]
+    pub spi: Vec<u8>,
+    /// Ordered list of transforms in this proposal
     pub transforms: Vec<Transform>,
 }
 
