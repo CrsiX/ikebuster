@@ -643,6 +643,15 @@ impl TryFrom<u8> for AuthenticationMethod {
     }
 }
 
+/// Values for the notify error message types
+///
+/// The values 0, 2, 3, 6, 8, 10, 12, 13, 15, 16, 18-23, 25-33 are reserved.
+/// Values 50-8191 are currently unassigned and 8192-65535 reserved for private use.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u16)]
+#[allow(missing_docs)]
 pub enum NotifyErrorMessageType {
     UnsupportedCriticalPayload = 1,
     InvalidIkeSpi = 4,
@@ -717,8 +726,6 @@ impl TryFrom<u16> for NotifyErrorMessageType {
     }
 }
 
-// TODO: IKEv2 Notify Message Status Types
-
 // TODO: IKEv2 Notification IPCOMP Transform IDs (Value 16387)
 
 /// Values for the security protocol identifiers
@@ -748,7 +755,7 @@ pub enum SecurityProtocol {
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
 #[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
 #[derive(Serialize, Deserialize)] // Serialization
-#[repr(u8)]
+#[repr(u16)]
 #[allow(missing_docs)]
 pub enum HashAlgorithm {
     Sha1 = 1,
@@ -775,6 +782,160 @@ impl TryFrom<u16> for HashAlgorithm {
             7 => Ok(HashAlgorithm::Streebog512),
             8..=1023 => Err(UnparseableParameter::Unassigned),
             1024..=65535 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
+}
+
+/// Values for the notify message status types
+///
+/// These are used to mark special notifications to the other peer(s) of
+/// an IKE conversation. Notably, they do not indicate failures per-se,
+/// unlike [NotifyErrorMessageType].
+///
+/// Values 0-16383 are out of range, 16447-40959 currently unassigned and
+/// 40960-65535 reserved for private use.
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
+#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
+#[derive(Serialize, Deserialize)] // Serialization
+#[repr(u16)]
+#[allow(missing_docs)]
+pub enum NotifyMessageStatus {
+    InitialContact = 16384,
+    SetWindowSize = 16385,
+    AdditionalTsPossible = 16386,
+    IpCompSupported = 16387,
+    NatDetectionSourceIp = 16388,
+    NatDetectionDestinationIp = 16389,
+    Cookie = 16390,
+    UseTransportMode = 16391,
+    HttpCertLookupSupported = 16392,
+    RekeySa = 16393,
+    EspTfcPaddingNotSupported = 16394,
+    NonFirstFragmentsAlso = 16395,
+    MobIkeSupported = 16396,
+    AdditionalIp4Address = 16397,
+    AdditionalIp6Address = 16398,
+    NoAdditionalAddresses = 16399,
+    UpdateSaAddresses = 16400,
+    Cookie2 = 16401,
+    NoNatsAllowed = 16402,
+    AuthLifetime = 16403,
+    MultipleAuthSupported = 16404,
+    AnotherAuthFollows = 16405,
+    RedirectSupported = 16406,
+    Redirect = 16407,
+    RedirectedFrom = 16408,
+    TicketLtOpaque = 16409,
+    TicketRequest = 16410,
+    TicketAck = 16411,
+    TicketNack = 16412,
+    TicketOpaque = 16413,
+    LinkId = 16414,
+    UseWespMode = 16415,
+    RohcSupported = 16416,
+    EapOnlyAuthentication = 16417,
+    ChildlessIkev2Supported = 16418,
+    QuickCrashDetection = 16419,
+    Ikev2MessageIdSyncSupported = 16420,
+    IpsecReplayCounterSyncSupported = 16421,
+    Ikev2MessageIdSync = 16422,
+    IpsecReplayCounterSync = 16423,
+    SecurePasswordMethods = 16424,
+    PskPersist = 16425,
+    PskConfirm = 16426,
+    ErxSupported = 16427,
+    IfomCapability = 16428,
+    GroupSender = 16429,
+    Ikev2FragmentationSupported = 16430,
+    SignatureHashAlgorithms = 16431,
+    CloneIkeSaSupported = 16432,
+    CloneIkeSa = 16433,
+    Puzzle = 16434,
+    UsePpk = 16435,
+    PpkIdentity = 16436,
+    NoPpkAuth = 16437,
+    IntermediateExchangeSupported = 16438,
+    Ip4Allowed = 16439,
+    Ip6Allowed = 16440,
+    AdditionalKeyExchange = 16441,
+    UseAgfrag = 16442,
+    SupportedAuthMethods = 16443,
+    SaResourceInfo = 16444,
+    UsePpkInt = 16445,
+    PpkIdentityKey = 16446,
+}
+
+impl TryFrom<u16> for NotifyMessageStatus {
+    type Error = UnparseableParameter;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0..=16383 => Err(UnparseableParameter::OutOfRange),
+            16384 => Ok(NotifyMessageStatus::InitialContact),
+            16385 => Ok(NotifyMessageStatus::SetWindowSize),
+            16386 => Ok(NotifyMessageStatus::AdditionalTsPossible),
+            16387 => Ok(NotifyMessageStatus::IpCompSupported),
+            16388 => Ok(NotifyMessageStatus::NatDetectionSourceIp),
+            16389 => Ok(NotifyMessageStatus::NatDetectionDestinationIp),
+            16390 => Ok(NotifyMessageStatus::Cookie),
+            16391 => Ok(NotifyMessageStatus::UseTransportMode),
+            16392 => Ok(NotifyMessageStatus::HttpCertLookupSupported),
+            16393 => Ok(NotifyMessageStatus::RekeySa),
+            16394 => Ok(NotifyMessageStatus::EspTfcPaddingNotSupported),
+            16395 => Ok(NotifyMessageStatus::NonFirstFragmentsAlso),
+            16396 => Ok(NotifyMessageStatus::MobIkeSupported),
+            16397 => Ok(NotifyMessageStatus::AdditionalIp4Address),
+            16398 => Ok(NotifyMessageStatus::AdditionalIp6Address),
+            16399 => Ok(NotifyMessageStatus::NoAdditionalAddresses),
+            16400 => Ok(NotifyMessageStatus::UpdateSaAddresses),
+            16401 => Ok(NotifyMessageStatus::Cookie2),
+            16402 => Ok(NotifyMessageStatus::NoNatsAllowed),
+            16403 => Ok(NotifyMessageStatus::AuthLifetime),
+            16404 => Ok(NotifyMessageStatus::MultipleAuthSupported),
+            16405 => Ok(NotifyMessageStatus::AnotherAuthFollows),
+            16406 => Ok(NotifyMessageStatus::RedirectSupported),
+            16407 => Ok(NotifyMessageStatus::Redirect),
+            16408 => Ok(NotifyMessageStatus::RedirectedFrom),
+            16409 => Ok(NotifyMessageStatus::TicketLtOpaque),
+            16410 => Ok(NotifyMessageStatus::TicketRequest),
+            16411 => Ok(NotifyMessageStatus::TicketAck),
+            16412 => Ok(NotifyMessageStatus::TicketNack),
+            16413 => Ok(NotifyMessageStatus::TicketOpaque),
+            16414 => Ok(NotifyMessageStatus::LinkId),
+            16415 => Ok(NotifyMessageStatus::UseWespMode),
+            16416 => Ok(NotifyMessageStatus::RohcSupported),
+            16417 => Ok(NotifyMessageStatus::EapOnlyAuthentication),
+            16418 => Ok(NotifyMessageStatus::ChildlessIkev2Supported),
+            16419 => Ok(NotifyMessageStatus::QuickCrashDetection),
+            16420 => Ok(NotifyMessageStatus::Ikev2MessageIdSyncSupported),
+            16421 => Ok(NotifyMessageStatus::IpsecReplayCounterSyncSupported),
+            16422 => Ok(NotifyMessageStatus::Ikev2MessageIdSync),
+            16423 => Ok(NotifyMessageStatus::IpsecReplayCounterSync),
+            16424 => Ok(NotifyMessageStatus::SecurePasswordMethods),
+            16425 => Ok(NotifyMessageStatus::PskPersist),
+            16426 => Ok(NotifyMessageStatus::PskConfirm),
+            16427 => Ok(NotifyMessageStatus::ErxSupported),
+            16428 => Ok(NotifyMessageStatus::IfomCapability),
+            16429 => Ok(NotifyMessageStatus::GroupSender),
+            16430 => Ok(NotifyMessageStatus::Ikev2FragmentationSupported),
+            16431 => Ok(NotifyMessageStatus::SignatureHashAlgorithms),
+            16432 => Ok(NotifyMessageStatus::CloneIkeSaSupported),
+            16433 => Ok(NotifyMessageStatus::CloneIkeSa),
+            16434 => Ok(NotifyMessageStatus::Puzzle),
+            16435 => Ok(NotifyMessageStatus::UsePpk),
+            16436 => Ok(NotifyMessageStatus::PpkIdentity),
+            16437 => Ok(NotifyMessageStatus::NoPpkAuth),
+            16438 => Ok(NotifyMessageStatus::IntermediateExchangeSupported),
+            16439 => Ok(NotifyMessageStatus::Ip4Allowed),
+            16440 => Ok(NotifyMessageStatus::Ip6Allowed),
+            16441 => Ok(NotifyMessageStatus::AdditionalKeyExchange),
+            16442 => Ok(NotifyMessageStatus::UseAgfrag),
+            16443 => Ok(NotifyMessageStatus::SupportedAuthMethods),
+            16444 => Ok(NotifyMessageStatus::SaResourceInfo),
+            16445 => Ok(NotifyMessageStatus::UsePpkInt),
+            16446 => Ok(NotifyMessageStatus::PpkIdentityKey),
+            16447..=40959 => Err(UnparseableParameter::Unassigned),
+            40960..=65535 => Err(UnparseableParameter::PrivateUse),
         }
     }
 }
