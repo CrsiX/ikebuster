@@ -5,6 +5,22 @@ use super::UnparseableParameter;
 
 use serde::{Deserialize, Serialize};
 
+/// Bitflag for IKEv2 (ISAKMP) header to indicate whether the sender of the packet is
+/// an initiator (bit set) or a responder (bit not set); see RFC 7296, section 3.1
+pub const FLAG_INITIATOR: u8 = 0b1000;
+/// Bitflag for IKEv2 (ISAKMP) header to indicate whether the sender is able to speak a
+/// higher version of IKE than IKEv2; it must be unset for IKEv2; see RFC 7296, section 3.1
+pub const FLAG_HIGHER_VERSION: u8 = 0b10000;
+/// Bitflag for IKEv2 (ISAKMP) header to indicate that a message is a response to a message
+/// containing the same message ID; it must be cleared in all requests and must be set in all
+/// responses; receiving see RFC 7296, section 3.1
+pub const FLAG_RESPONSE: u8 = 0b100000;
+
+/// Bitflag for IKEv2 payload header to indicate whether the recipient of the message should skip it
+/// if the message is not understood (bit not set) or reject the entire message (bit set), where the
+/// flag must be zero for all officially described types found in the RFC; see RFC 7296, section 2.5
+pub const FLAG_CRITICAL: u8 = 0b10000000;
+
 /// Type of the exchanged being used
 ///
 /// This constrains the payloads sent in each message in an exchange.
@@ -78,7 +94,7 @@ pub enum PayloadType {
     // RFC 7296
     KeyExchange = 34,
     // RFC 7296
-    IdentificationInitiaor = 35,
+    IdentificationInitiator = 35,
     // RFC 7296
     IdentificationResponder = 36,
     // RFC 7296
@@ -128,7 +144,7 @@ impl TryFrom<u8> for PayloadType {
             1..=32 => Err(UnparseableParameter::Reserved),
             33 => Ok(PayloadType::SecurityAssociation),
             34 => Ok(PayloadType::KeyExchange),
-            35 => Ok(PayloadType::IdentificationInitiaor),
+            35 => Ok(PayloadType::IdentificationInitiator),
             36 => Ok(PayloadType::IdentificationResponder),
             37 => Ok(PayloadType::Certificate),
             38 => Ok(PayloadType::CertificateRequest),
@@ -194,6 +210,7 @@ pub enum TransformType {
 impl TryFrom<u8> for TransformType {
     type Error = UnparseableParameter;
 
+    /// Determine the [TransformType] from an u8 value as used in the network packet structure
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             0 => Err(UnparseableParameter::Reserved),
@@ -227,7 +244,12 @@ impl TryFrom<u8> for TransformType {
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum AttributeType {
+    /// Definition for the key length of variable-length encryption algorithms like AES-CBC;
+    /// requires TV (type/value) format for the attribute payload packet
     KeyLength = 14,
+    /// Definition for the signature algorithm used in Group Controller authentication;
+    /// defined in draft-ietf-ipsecme-g-ikev2-22 and therefore not implemented in this project;
+    /// requires TLV (type/length/value) format for the attribute payload packet
     SignatureAlgorithm = 18,
 }
 
@@ -535,7 +557,7 @@ impl TryFrom<u16> for KeyExchangeMethod {
 pub enum SequenceNumberType {
     Sequential32bit = 0,
     PartiallyTransmitted64bit = 1,
-    Unspecified32bit = 2,
+    Unspecified32bit = 2, // not used, since defined only in draft-ietf-ipsecme-g-ikev2-22
 }
 
 impl TryFrom<u16> for SequenceNumberType {

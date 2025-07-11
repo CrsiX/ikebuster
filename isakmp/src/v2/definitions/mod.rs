@@ -13,7 +13,8 @@ pub enum UnparseableParameter {
     Reserved,
     /// The parameter has no recognized meaning by any known standard
     Unassigned,
-    /// The parameter is reserved for Private Use by proprietary implementations and not part of a standard
+    /// The parameter is reserved for Private Use by proprietary implementations
+    /// and not part of a standard
     PrivateUse,
     /// The parameter can not reach the value this resolves to,
     /// as such the packet where it originates from must be invalid
