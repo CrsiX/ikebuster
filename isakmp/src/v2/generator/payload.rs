@@ -1,7 +1,8 @@
+use crate::v2::definitions::params::PayloadType;
 use crate::v2::definitions::Payload;
 
 impl Payload {
-    fn build(&self) -> Vec<u8> {
+    pub(crate) fn build(&self, next_payload: PayloadType) -> Vec<u8> {
         vec![]
     }
 }

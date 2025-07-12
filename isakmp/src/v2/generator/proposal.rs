@@ -42,7 +42,6 @@ mod tests {
         EncryptionAlgorithm, IntegrityAlgorithm, PseudorandomFunction,
     };
     use crate::v2::definitions::params::{KeyExchangeMethod, SecurityProtocol};
-    use crate::v2::definitions::Attribute::KeyLength;
     use crate::v2::definitions::{Proposal, Transform};
 
     #[test]
@@ -99,7 +98,7 @@ mod tests {
                 protocol: SecurityProtocol::InternetKeyExchange,
                 spi: vec![],
                 transforms: vec![
-                    Transform::Encryption((EncryptionAlgorithm::AesCbc, Some(KeyLength(256)))),
+                    Transform::Encryption((EncryptionAlgorithm::AesCbc, Some(256))),
                     Transform::Integrity(IntegrityAlgorithm::HmacSha2_256_128),
                     Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_256),
                     Transform::KeyExchange(KeyExchangeMethod::Curve25519)

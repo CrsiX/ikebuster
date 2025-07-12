@@ -122,14 +122,14 @@ pub struct Proposal {
 /// High-level representation of a transformation and all required additional
 /// information that is dynamically built from incoming packets. See [TransformType].
 pub enum Transform {
-    Encryption((EncryptionAlgorithm, Option<Attribute>)),
+    Encryption((EncryptionAlgorithm, Option<u16>)),
     PseudoRandomFunction(PseudorandomFunction),
     Integrity(IntegrityAlgorithm),
     KeyExchange(KeyExchangeMethod),
     SequenceNumber(SequenceNumberType),
 }
 
-pub enum Attribute {
+pub(crate) enum Attribute {
     /// Key-length in bits for variable-length encryption ciphers like AES-CBC
     KeyLength(u16),
 }

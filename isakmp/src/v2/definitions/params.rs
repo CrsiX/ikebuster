@@ -1,7 +1,7 @@
 //! IKEv2 parameters and their parsers as defined in the IANA IKEv2 list
 //! found at https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml
 
-use super::UnparseableParameter;
+use super::{Payload, Transform, UnparseableParameter};
 
 use serde::{Deserialize, Serialize};
 
@@ -170,6 +170,20 @@ impl TryFrom<u8> for PayloadType {
     }
 }
 
+impl From<&Payload> for PayloadType {
+    fn from(value: &Payload) -> Self {
+        match value {
+            Payload::SecurityAssociation(_) => Self::SecurityAssociation,
+            Payload::KeyExchange(_) => Self::KeyExchange,
+            Payload::Nonce(_) => Self::Nonce,
+            Payload::Notify(_) => Self::Notify,
+            Payload::Delete(_) => Self::Delete,
+            Payload::VendorID(_) => Self::VendorID,
+            Payload::EncryptedAndAuthenticated(_) => Self::EncryptedAndAuthenticated,
+        }
+    }
+}
+
 /// Type of the transform being used
 ///
 /// Value 0 is reserved, 15-240 is unassigned and 241-255 is
@@ -230,6 +244,18 @@ impl TryFrom<u8> for TransformType {
             14 => Ok(TransformType::GroupControllerAuthenticationMethod),
             15..=240 => Err(UnparseableParameter::Unassigned),
             241..=255 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
+}
+
+impl From<&Transform> for TransformType {
+    fn from(value: &Transform) -> Self {
+        match value {
+            Transform::Encryption(_) => TransformType::EncryptionAlgorithm,
+            Transform::PseudoRandomFunction(_) => TransformType::PseudoRandomFunction,
+            Transform::Integrity(_) => TransformType::IntegrityAlgorithm,
+            Transform::KeyExchange(_) => TransformType::KeyExchangeMethod,
+            Transform::SequenceNumber(_) => TransformType::SequenceNumber,
         }
     }
 }
