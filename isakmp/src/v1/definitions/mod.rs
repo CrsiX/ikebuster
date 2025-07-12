@@ -176,7 +176,9 @@ pub struct GenericPayloadHeader {
     /// If the current payload is the last in the message, then this field will be 0.
     /// This field provides the "chaining" capability.
     pub next_payload: u8,
-    /// Unused, set to 0
+    /// Unused, set to 0. It contains the "criticality bit" for IKEv2 as well, but this
+    /// bit flag must also be unset for any payload defined in the RFC, therefore
+    /// this can simply be ignored.
     pub reserved: u8,
     /// Length in octets of the current payload, including the generic payload header.
     pub payload_length: U16,

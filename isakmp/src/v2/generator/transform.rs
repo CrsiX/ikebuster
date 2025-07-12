@@ -1,3 +1,4 @@
+use crate::v2::definitions::header::TransformHeader;
 use crate::v2::definitions::params::TransformType;
 use crate::v2::definitions::Transform;
 use zerocopy::network_endian::U16;
@@ -41,13 +42,17 @@ impl Transform {
         };
 
         let packet_length = 8 + attributes.len() as u16;
+        let header = TransformHeader {
+            last_substruct: if last { 0 } else { 3 },
+            reserved: 0,
+            transform_length: U16::from(packet_length),
+            transform_type: t_type as u8,
+            reserved2: 0,
+            transform_id: t_id,
+        };
+
         let mut packet = Vec::with_capacity(packet_length as usize);
-        packet.push(if last { 0 } else { 3 });
-        packet.push(0);
-        packet.extend_from_slice(U16::from(packet_length).as_bytes());
-        packet.push(t_type as u8);
-        packet.push(0);
-        packet.extend_from_slice(t_id.as_bytes());
+        packet.extend_from_slice(header.as_bytes());
         packet.extend(attributes);
         packet
     }

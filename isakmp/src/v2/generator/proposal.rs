@@ -1,3 +1,4 @@
+use crate::v2::definitions::header::ProposalHeader;
 use crate::v2::definitions::Proposal;
 use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
@@ -17,14 +18,18 @@ impl Proposal {
         }
 
         let packet_length = 8 + self.spi.len() as u16 + transforms.len() as u16;
+        let header = ProposalHeader {
+            last_substruct: if last { 0 } else { 2 },
+            reserved: 0,
+            proposal_length: U16::from(packet_length),
+            proposal_num: num,
+            protocol_id: self.protocol as u8,
+            spi_size: self.spi.len() as u8,
+            num_transforms: self.transforms.len() as u8,
+        };
+
         let mut packet = Vec::with_capacity(packet_length as usize);
-        packet.push(if last { 0 } else { 2 });
-        packet.push(0);
-        packet.extend_from_slice(U16::from(packet_length).as_bytes());
-        packet.push(num);
-        packet.push(self.protocol as u8);
-        packet.push(self.spi.len() as u8);
-        packet.push(self.transforms.len() as u8);
+        packet.extend_from_slice(header.as_bytes());
         packet.extend(self.spi.clone());
         packet.extend(transforms);
         packet
