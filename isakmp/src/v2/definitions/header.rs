@@ -1,6 +1,6 @@
 //! Module containing network level header structs for pieces of the protocol
 
-use super::params::{SecurityProtocol, TransformType};
+use super::params::{KeyExchangeMethod, SecurityProtocol, TransformType};
 use zerocopy::network_endian::U16;
 use zerocopy::{AsBytes, FromBytes, FromZeroes, Unaligned};
 
@@ -8,6 +8,20 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes, Unaligned};
 ///
 /// For IKEv2, a proposal must include transformations for encryption,
 /// pseudo-random number generation, integrity and the Diffie-Hellman group.
+///
+///                          1                   2                   3
+///      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Last Substruc |   RESERVED    |         Proposal Length       |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Proposal Num  |  Protocol ID  |    SPI Size   |Num  Transforms|
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     ~                        SPI (variable)                         ~
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                                               |
+///     ~                        <Transforms>                           ~
+///     |                                                               |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
 #[repr(C, packed)]
 pub struct ProposalHeader {
@@ -37,6 +51,20 @@ pub struct ProposalHeader {
 }
 
 /// Protocol header for a Transform
+///
+///                          1                   2                   3
+///      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Last Substruc |   RESERVED    |        Transform Length       |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |Transform Type |   RESERVED    |          Transform ID         |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                                               |
+///     ~                      Transform Attributes                     ~
+///     |                                                               |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// The transform attributes are not part of the header and thus not included in the struct.
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
 #[repr(C, packed)]
 pub struct TransformHeader {
@@ -61,6 +89,16 @@ pub struct TransformHeader {
 }
 
 /// Protocol field for fixed-length attributes of a Transform as per RFC 7296, section 3.3.5
+///
+///                         1                   2                   3
+///      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |A|       Attribute Type        |    AF=0  Attribute Length     |
+///     |F|                             |    AF=1  Attribute Value      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                   AF=0  Attribute Value                       |
+///     |                   AF=1  Not Transmitted                       |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
 #[repr(C, packed)]
 pub struct AttributeHeaderTV {
@@ -71,9 +109,36 @@ pub struct AttributeHeaderTV {
     pub attribute_value: U16,
 }
 
-// TODO: Key Exchange Header
+/// Protocol header for key exchange payloads
+///
+/// The Diffie-Hellman Group Num identifies the Diffie-Hellman group in
+/// which the Key Exchange Data was computed (see RFC 7296, section 3.3.2).
+/// This Diffie-Hellman Group Num MUST match a Diffie-Hellman group specified
+/// in a proposal in the SA payload that is sent in the same message, and
+/// SHOULD match the Diffie-Hellman group in the first group in the first
+/// proposal, if such exists. If none of the proposals in that SA payload
+/// specifies a Diffie-Hellman group, the KE payload MUST NOT be present.
+///
+///                          1                   2                   3
+///      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |   Diffie-Hellman Group Num    |           RESERVED            |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                                               |
+///     ~                       Key Exchange Data                       ~
+///     |                                                               |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// The key exchange data is not part of the header and thus not included in the struct.
+#[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
+#[repr(C, packed)]
+pub struct KeyExchangeHeader {
+    /// DH group number as per [KeyExchangeMethod]
+    pub dh_group_num: U16,
+    /// Ignored but must be set to 0
+    pub reserved: U16,
+}
+
 // TODO: Certificate Header
-// TODO: Nonce Header
 // TODO: Notify Header
 // TODO: Delete Header
-// TODO: Vendor ID Header

@@ -1,3 +1,4 @@
+#[cfg(not(doctest))]
 pub mod header;
 pub mod params;
 
@@ -69,10 +70,22 @@ pub struct IKEv2 {
 pub enum Payload {
     SecurityAssociation(SecurityAssociation),
     KeyExchange(KeyExchange),
-    Nonce(Nonce),
+
+    /// Container for random data used to guarantee liveness during an
+    /// exchange and protect against replay attacks. The size of the Nonce Data
+    /// MUST be between 16 and 256 octets, inclusive. Nonce values MUST NOT be reused.
+    Nonce(Vec<u8>),
     Notify(Notification),
     Delete(Deletion),
-    VendorID(VendorID),
+
+    /// Vendor-defined constant value that allow clients to discover peers
+    /// with vendor-specific functionality in the private-use areas of various
+    /// types in the document and enable vendor-specific extensions.
+    ///
+    /// Multiple VendorID payloads may be present in a single IKEv2 message.
+    /// It is the responsibility of the person choosing the Vendor ID to assure
+    /// its uniqueness in spite of the absence of any central registry for IDs.
+    VendorID(Vec<u8>),
     EncryptedAndAuthenticated(Vec<u8>),
 }
 
@@ -135,8 +148,13 @@ pub(crate) enum Attribute {
 }
 
 // TODO
-pub struct KeyExchange {}
-pub struct Nonce {}
+pub struct KeyExchange {
+    pub dh_group: KeyExchangeMethod,
+    pub data: Vec<u8>,
+}
+
+// TODO
 pub struct Notification {}
+
+// TODO
 pub struct Deletion {}
-pub struct VendorID {}
