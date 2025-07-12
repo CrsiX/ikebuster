@@ -11,7 +11,7 @@ impl Transform {
     /// or if this transform is the last transform in the proposal payload (true).
     pub fn build(&self, last: bool) -> Vec<u8> {
         let (t_type, t_id, attributes) = match self {
-            Transform::Encryption((algorithm, key_length)) => (
+            Transform::Encryption(algorithm, key_length) => (
                 TransformType::EncryptionAlgorithm,
                 U16::new(*algorithm as u16),
                 match key_length {
@@ -79,11 +79,11 @@ mod tests {
     #[test]
     fn encryption() {
         assert_eq!(
-            Transform::Encryption((EncryptionAlgorithm::CamelliaCtr, Some(192))).build(true),
+            Transform::Encryption(EncryptionAlgorithm::CamelliaCtr, Some(192)).build(true),
             vec![0x00, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x18, 0x80, 0x0e, 0x00, 0xc0]
         );
         assert_eq!(
-            Transform::Encryption((EncryptionAlgorithm::AesCbc, Some(128))).build(false),
+            Transform::Encryption(EncryptionAlgorithm::AesCbc, Some(128)).build(false),
             vec![0x03, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x0c, 0x80, 0x0e, 0x00, 0x80]
         )
     }

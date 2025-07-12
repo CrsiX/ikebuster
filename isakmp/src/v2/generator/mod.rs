@@ -2,6 +2,9 @@
 //! types that converts high-level Rust structs into network-encoded byte arrays
 
 mod attribute;
+mod deletion;
+mod key_exchange;
+mod notification;
 mod packet;
 mod payload;
 mod proposal;

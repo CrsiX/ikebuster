@@ -140,5 +140,54 @@ pub struct KeyExchangeHeader {
 }
 
 // TODO: Certificate Header
-// TODO: Notify Header
+
+/// Protocol header for notify payloads
+///
+///                          1                   2                   3
+///      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |  Protocol ID  |   SPI Size    |      Notify Message Type      |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                                               |
+///     ~                Security Parameter Index (SPI)                 ~
+///     |                                                               |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                                               |
+///     ~                       Notification Data                       ~
+///     |                                                               |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// Neither the Security Parameter Index nor the notification data is part
+/// of the header and thus not included in the struct. The value in the
+/// notification data is type specific for each message type.
+#[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
+#[repr(C, packed)]
+pub struct NotifyHeader {
+    /// If this notification concerns an existing SA whose SPI is given in the
+    /// SPI field, this field indicates the type of that SA. For notifications
+    /// concerning Child SAs, this field MUST contain either (2) to indicate AH
+    /// or (3) to indicate ESP. Of the notifications defined in RFC 7296,
+    /// the SPI is included only with INVALID_SELECTORS, REKEY_SA, and
+    /// CHILD_SA_NOT_FOUND. If the SPI field is empty, this field MUST be
+    /// sent as zero and MUST be ignored on receipt.
+    pub protocol_id: u8,
+    /// Length in octets of the SPI as defined by the IPsec protocol ID or zero
+    /// if no SPI is applicable. For a notification concerning the IKE SA, the
+    /// SPI Size MUST be zero and the field must be empty.
+    pub spi_size: u8,
+    /// Specifies the type of notification message, see [NotifyErrorMessageType]
+    /// and [NotifyMessageStatus], because both are used in the same field here.
+    ///
+    /// Types in the range 0 - 16383 are intended for reporting errors. An
+    /// implementation receiving a Notify payload with one of these types
+    /// that it does not recognize in a response MUST assume that the
+    /// corresponding request has failed entirely. Unrecognized error types
+    /// in a request and status types in a request or response MUST be
+    /// ignored, and they should be logged. Notify payloads with status types
+    /// greater than 16383 MAY be added to any message and MUST be ignored if not
+    /// recognized. They are intended to indicate capabilities, and as part
+    /// of SA negotiation, are used to negotiate non-cryptographic parameters.
+    pub notify_message_type: U16,
+}
+
 // TODO: Delete Header

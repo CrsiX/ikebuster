@@ -4,6 +4,7 @@ pub mod params;
 
 pub use super::super::v1::definitions::GenericPayloadHeader;
 pub use super::super::v1::definitions::Header;
+use crate::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage};
 use params::{
     EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod, PayloadType,
     PseudorandomFunction, SecurityProtocol, SequenceNumberType, TransformType,
@@ -135,7 +136,7 @@ pub struct Proposal {
 /// High-level representation of a transformation and all required additional
 /// information that is dynamically built from incoming packets. See [TransformType].
 pub enum Transform {
-    Encryption((EncryptionAlgorithm, Option<u16>)),
+    Encryption(EncryptionAlgorithm, Option<u16>),
     PseudoRandomFunction(PseudorandomFunction),
     Integrity(IntegrityAlgorithm),
     KeyExchange(KeyExchangeMethod),
@@ -147,14 +148,20 @@ pub(crate) enum Attribute {
     KeyLength(u16),
 }
 
-// TODO
+/// High-level representation of a Key Exchange
 pub struct KeyExchange {
     pub dh_group: KeyExchangeMethod,
     pub data: Vec<u8>,
 }
 
-// TODO
-pub struct Notification {}
+/// High-level representation of notifications between peers
+///
+/// Error and status messages may have additional data, depending on their type.
+/// For this representation, these are not parsed and provided as [`Vec<u8>`] instead.
+pub enum Notification {
+    Error(NotifyErrorMessage, Vec<u8>),
+    Status(NotifyStatusMessage, Vec<u8>),
+}
 
 // TODO
 pub struct Deletion {}
