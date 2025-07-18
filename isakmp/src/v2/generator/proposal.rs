@@ -1,5 +1,6 @@
 use crate::v2::definitions::header::ProposalHeader;
 use crate::v2::definitions::Proposal;
+use crate::v2::generator::EXPECTED_TRANSFORM_LENGTH;
 use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
 
@@ -12,7 +13,7 @@ impl Proposal {
     /// The argument `last` defines if any proposal is following this proposal (false)
     /// or if this proposal is the last proposal in the Security Association payload (true).
     pub fn build(&self, num: u8, last: bool) -> Vec<u8> {
-        let mut transforms = Vec::with_capacity(12 * self.transforms.len());
+        let mut transforms = Vec::with_capacity(EXPECTED_TRANSFORM_LENGTH * self.transforms.len());
         for (i, transform) in self.transforms.iter().enumerate() {
             transforms.extend(transform.build(i == self.transforms.len() - 1));
         }

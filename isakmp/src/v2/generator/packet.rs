@@ -1,17 +1,20 @@
 use crate::v2::definitions::params::{PayloadType, FLAG_INITIATOR, FLAG_RESPONSE};
 use crate::v2::definitions::{Header, IKEv2};
+use crate::v2::generator::{GeneratorError, ESTIMATED_PAYLOAD_LENGTH};
 use zerocopy::network_endian::{U32, U64};
 use zerocopy::AsBytes;
 
-impl IKEv2 {
-    fn build(&self) -> Vec<u8> {
-        let mut payloads = Vec::with_capacity(256 * self.payloads.len());
-        assert!(self.payloads.len() <= 254);
+impl IKEv2<'_> {
+    fn try_build(&self) -> Result<Vec<u8>, GeneratorError> {
+        if self.payloads.len() >= 255 {
+            return Err(GeneratorError::TooManyPayloads);
+        }
+        let mut payloads = Vec::with_capacity(ESTIMATED_PAYLOAD_LENGTH * self.payloads.len());
         for (i, payload) in self.payloads.iter().enumerate() {
-            payloads.extend(payload.build(match self.payloads.get(i + 1) {
+            payloads.extend(payload.try_build(match self.payloads.get(i + 1) {
                 None => PayloadType::NoNextPayload,
                 Some(next) => next.into(),
-            }));
+            })?);
         }
 
         let packet_length = 28 + payloads.len() as u32;
@@ -33,7 +36,7 @@ impl IKEv2 {
         let mut packet = Vec::with_capacity(packet_length as usize);
         packet.extend_from_slice(header.as_bytes());
         packet.extend(payloads);
-        packet
+        Ok(packet)
     }
 }
 
@@ -54,7 +57,8 @@ mod tests {
                 message_id: 999999999,
                 payloads: vec![],
             }
-            .build(),
+            .try_build()
+            .unwrap(),
             vec![
                 0x00, 0x04, 0xc0, 0x1d, 0xb4, 0x00, 0xb0, 0xc9, // initiator
                 0x00, 0x00, 0x00, 0x00, 0x11, 0xf1, 0x5b, 0xa3, // responder

@@ -170,7 +170,7 @@ impl TryFrom<u8> for PayloadType {
     }
 }
 
-impl From<&Payload> for PayloadType {
+impl From<&Payload<'_>> for PayloadType {
     fn from(value: &Payload) -> Self {
         match value {
             Payload::SecurityAssociation(_) => Self::SecurityAssociation,

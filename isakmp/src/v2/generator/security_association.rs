@@ -1,11 +1,14 @@
 use crate::v2::definitions::params::PayloadType;
 use crate::v2::definitions::{GenericPayloadHeader, SecurityAssociation};
+use crate::v2::generator::{GeneratorError, ESTIMATED_PROPOSAL_LENGTH};
 use zerocopy::AsBytes;
 
 impl SecurityAssociation {
-    pub fn build(&self, next_payload: PayloadType) -> Vec<u8> {
-        let mut proposals = Vec::with_capacity(256 * self.proposals.len());
-        assert!(self.proposals.len() <= 254);
+    pub fn try_build(&self, next_payload: PayloadType) -> Result<Vec<u8>, GeneratorError> {
+        if self.proposals.len() >= 255 {
+            return Err(GeneratorError::TooManyProposals);
+        }
+        let mut proposals = Vec::with_capacity(ESTIMATED_PROPOSAL_LENGTH * self.proposals.len());
         for (i, proposal) in self.proposals.iter().enumerate() {
             proposals.extend(proposal.build(i as u8 + 1, i == self.proposals.len() - 1));
         }
@@ -19,7 +22,7 @@ impl SecurityAssociation {
         let mut packet = Vec::with_capacity(packet_length.into());
         packet.extend_from_slice(header.as_bytes());
         packet.extend(proposals);
-        packet
+        Ok(packet)
     }
 }
 
@@ -34,7 +37,9 @@ mod tests {
     #[test]
     fn empty() {
         assert_eq!(
-            SecurityAssociation { proposals: vec![] }.build(PayloadType::NoNextPayload),
+            SecurityAssociation { proposals: vec![] }
+                .try_build(PayloadType::NoNextPayload)
+                .unwrap(),
             vec![0x00, 0x00, 0x00, 0x04]
         )
     }
@@ -66,7 +71,8 @@ mod tests {
                     }
                 ]
             }
-            .build(PayloadType::NoNextPayload),
+            .try_build(PayloadType::NoNextPayload)
+            .unwrap(),
             vec![
                 0x00, 0x00, 0x00, 0x26, // Security Association
                 0x02, 0x00, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, // Proposal 1
@@ -92,7 +98,8 @@ mod tests {
                     ],
                 }]
             }
-            .build(PayloadType::KeyExchange),
+            .try_build(PayloadType::KeyExchange)
+            .unwrap(),
             vec![
                 0x22, 0x00, 0x00, 0x31, // Security Association header
                 0x00, 0x00, 0x00, 0x2d, 0x01, 0x01, 0x01, 0x04, // Proposal header
