@@ -32,6 +32,17 @@ pub const FLAG_CRITICAL: u8 = 0b10000000;
 /// header of a payload.
 pub const FLAG_MORE_FOLLOWING_PROPOSALS: u8 = 2;
 
+/// Flag that specifies whether this is the last Transform
+/// Substructure in the [Proposal]. The respective field has a
+/// value of 0 if this was the last Transform Substructure, and a
+/// value of 3 if there are more Transform Substructures. This syntax
+/// is inherited from ISAKMP, but is unnecessary because the last
+/// transform could be identified from the length of the proposal.
+/// The value (3) corresponds to a payload type of Transform in IKEv1,
+/// and the first four octets of the Transform structure are designed
+/// to look somewhat like the header of a payload.
+pub const FLAG_MORE_FOLLOWING_TRANSFORMS: u8 = 3;
+
 /// Type of the exchanged being used
 ///
 /// This constrains the payloads sent in each message in an exchange.
@@ -788,8 +799,8 @@ impl TryFrom<u16> for NotifyErrorMessage {
 /// Values for the security protocol identifiers
 ///
 /// These are used in a proposal to specify the type of protocol to use
-/// to negotiate the Security Association.
-/// Values 7-200 are unassigned and 201-255 reserved for private use.
+/// to negotiate the Security Association. Value 0 is reserved,
+/// values 7-200 are unassigned and 201-255 reserved for private use.
 ///
 /// In this project, only [SecurityProtocol::InternetKeyExchange] is relevant.
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
@@ -804,6 +815,24 @@ pub enum SecurityProtocol {
     FcEncapsulatingSecurityPayloadHeader = 4,
     FcCtAuthentication = 5,
     GroupIKEUpdate = 6,
+}
+
+impl TryFrom<u8> for SecurityProtocol {
+    type Error = UnparseableParameter;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Err(UnparseableParameter::Reserved),
+            1 => Ok(SecurityProtocol::InternetKeyExchange),
+            2 => Ok(SecurityProtocol::AuthenticationHeader),
+            3 => Ok(SecurityProtocol::EncapsulatingSecurityPayload),
+            4 => Ok(SecurityProtocol::FcEncapsulatingSecurityPayloadHeader),
+            5 => Ok(SecurityProtocol::FcCtAuthentication),
+            6 => Ok(SecurityProtocol::GroupIKEUpdate),
+            7..=200 => Err(UnparseableParameter::Unassigned),
+            201..=255 => Err(UnparseableParameter::PrivateUse),
+        }
+    }
 }
 
 /// Values for the hash algorithm identifier

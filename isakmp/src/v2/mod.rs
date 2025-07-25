@@ -69,6 +69,25 @@ mod tests {
 
     #[test]
     #[allow(clippy::unwrap_used)]
+    fn generate_and_parse_sa_with_many_empty_proposals() {
+        let mut sa = SecurityAssociation { proposals: vec![] };
+        for i in 0..100 {
+            sa.proposals.push(Proposal::new_empty(
+                SecurityProtocol::InternetKeyExchange,
+                Some(vec![i]),
+            ));
+        }
+        let generated_sa = sa.try_build(PayloadType::NoNextPayload).unwrap();
+        let parsed_sa = SecurityAssociation::try_parse(generated_sa.as_slice()).unwrap();
+        assert_eq!(sa, parsed_sa);
+        assert_eq!(sa.proposals.len(), 100);
+        for i in 0..100 {
+            assert_eq!(sa.proposals[i].spi[0], i as u8);
+        }
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
     fn generate_and_parse_packet() {
         let nonce = vec![
             0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37, //

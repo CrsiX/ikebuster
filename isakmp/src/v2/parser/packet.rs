@@ -37,11 +37,7 @@ impl IKEv2<'_> {
                 }
                 PayloadType::SecurityAssociation => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
-                    let sa = if v.is_empty() && l == size_of::<GenericPayloadHeader>() {
-                        SecurityAssociation { proposals: vec![] }
-                    } else {
-                        SecurityAssociation::try_parse(v.as_slice())?
-                    };
+                    let sa = SecurityAssociation::try_parse(v.as_slice())?;
                     next_payload = n;
                     (Payload::SecurityAssociation(sa), l)
                 }

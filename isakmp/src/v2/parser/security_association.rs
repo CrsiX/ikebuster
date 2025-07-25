@@ -8,9 +8,12 @@ impl SecurityAssociation {
     /// Parses a buffer into a [SecurityAssociation]. The buffer must not contain the
     /// generic payload header, it should only contain the list of proposals. The buffer
     /// length is not checked, but will yield an error if too small. Larger buffers
-    /// than necessary are ignored. The buffer must not be empty, and must contain
-    /// at least one proposal. If the SA has no proposals
+    /// than necessary are ignored. If the buffer is not empty, it must contain at least
+    /// one proposal. Otherwise, an empty buffer produces an SA that has no proposals.
     pub(crate) fn try_parse(buf: &[u8]) -> Result<Self, ParserError> {
+        if buf.is_empty() {
+            return Ok(SecurityAssociation { proposals: vec![] });
+        }
         let mut offset = 0;
         let mut proposals = vec![];
         let mut proposal_header =
@@ -21,13 +24,9 @@ impl SecurityAssociation {
         let mut more_proposals = proposal_header.last_substruct == FLAG_MORE_FOLLOWING_PROPOSALS;
 
         while more_proposals {
-            offset += size_of::<ProposalHeader>();
-
-            let body_len =
-                proposal_header.proposal_length.get() as usize - size_of::<ProposalHeader>();
-            let proposal = Proposal::try_parse(&buf[offset..offset + body_len])?;
+            let proposal = Proposal::try_parse(&proposal_header, &buf[offset..])?;
             proposals.push(proposal);
-            offset += body_len;
+            offset += proposal_header.proposal_length.get() as usize;
 
             let next_proposal_header = ProposalHeader::ref_from_prefix(&buf[offset..])
                 .ok_or(ParserError::BufferTooSmall)?;
