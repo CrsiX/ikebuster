@@ -2,3 +2,4 @@
 
 pub mod definitions;
 pub mod generator;
+pub mod parser;
