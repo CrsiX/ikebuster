@@ -29,7 +29,7 @@ mod tests {
         )]);
         let sa = SecurityAssociation { proposals: vec![p] };
         let generated_sa = sa.try_build(PayloadType::NoNextPayload).unwrap();
-        let (parsed_sa, _, _) = SecurityAssociation::try_parse(generated_sa.as_slice()).unwrap();
+        let parsed_sa = SecurityAssociation::try_parse(generated_sa.as_slice()).unwrap();
         assert_eq!(sa, parsed_sa);
     }
 
@@ -63,15 +63,17 @@ mod tests {
             0x00, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x1f, // Transform 8, KE 2
         ];
         assert_eq!(sa_repr, buff);
-        let (parsed_sa, len, next) = SecurityAssociation::try_parse(buff.as_slice()).unwrap();
+        let parsed_sa = SecurityAssociation::try_parse(&buff[4..]).unwrap();
         assert_eq!(sa, parsed_sa);
-        assert_eq!(len, buff.len());
-        assert_eq!(next, PayloadType::NoNextPayload);
     }
 
     #[test]
     #[allow(clippy::unwrap_used)]
     fn generate_and_parse_packet() {
+        let nonce = vec![
+            0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37, //
+            0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37,
+        ];
         let ike = IKEv2 {
             initiator_cookie: 0x48cfb887c03b2e7f, // random data
             responder_cookie: 0x55bf4a6acd91535e, // random data
@@ -81,10 +83,7 @@ mod tests {
             message_id: 0x661cf0d4, // random data
             payloads: vec![
                 Payload::VendorID(vec![0x42]),
-                Payload::Nonce(vec![
-                    0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37, //
-                    0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37,
-                ]),
+                Payload::Nonce(nonce.clone()),
                 Payload::SecurityAssociation(SecurityAssociation { proposals: vec![] }),
                 Payload::EncryptedAndAuthenticated(vec![0x54, 0x65, 0x73, 0x74]), // "Test"
             ],
@@ -92,5 +91,8 @@ mod tests {
         let generated_packet = ike.try_build().unwrap();
         let parsed_ike = IKEv2::try_parse(generated_packet.as_slice()).unwrap();
         assert_eq!(ike, parsed_ike);
+        assert_eq!(ike.payloads.len(), 4);
+        assert_eq!(ike.payloads[0], Payload::VendorID(vec![0x42]));
+        assert_eq!(ike.payloads[1], Payload::Nonce(nonce));
     }
 }

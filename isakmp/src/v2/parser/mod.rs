@@ -3,6 +3,7 @@
 //! Use the [IKEv2::try_parse] associated function as an entrypoint.
 
 mod packet;
+mod proposal;
 mod security_association;
 
 use crate::v2::definitions::params::PayloadType;
@@ -19,6 +20,10 @@ pub enum ParserError {
     WrongProtocol,
     #[error("Parameter could not be parsed: {0:#?}")]
     UnparseableParameter(UnparseableParameter),
+    #[error("Proposal numbering doesn't start at 1")]
+    InvalidProposalNumberingStart,
+    #[error("Proposal numbering doesn't increment by 1")]
+    InvalidProposalNumbering,
 }
 
 impl From<UnparseableParameter> for ParserError {

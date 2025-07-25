@@ -21,6 +21,17 @@ pub const FLAG_RESPONSE: u8 = 0b100000;
 /// flag must be zero for all officially described types found in the RFC; see RFC 7296, section 2.5
 pub const FLAG_CRITICAL: u8 = 0b10000000;
 
+/// Flag that specifies whether this is the last Proposal Substructure
+/// in the [SecurityAssociation]. The respective field has a value of 0
+/// if this was the last Proposal Substructure, and a value of 2 if
+/// there are more Proposal Substructures. This syntax is inherited
+/// from ISAKMP, but is unnecessary because the last Proposal could be
+/// identified from the length of the SA. The value (2) corresponds
+/// to a payload type of Proposal in IKEv1, and the first four octets
+/// of the Proposal structure are designed to look somewhat like the
+/// header of a payload.
+pub const FLAG_MORE_FOLLOWING_PROPOSALS: u8 = 2;
+
 /// Type of the exchanged being used
 ///
 /// This constrains the payloads sent in each message in an exchange.

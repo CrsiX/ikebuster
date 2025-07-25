@@ -8,7 +8,15 @@ use log::warn;
 use zerocopy::FromBytes;
 
 impl IKEv2<'_> {
-    /// Parse a byte slice into an [IKEv2] packet, if possible
+    /// Parse a buffer into an [IKEv2] packet, if possible.
+    ///
+    /// The parser functionality considers the size of payloads noted in
+    /// the header of the respective payload to split the buffer and feed
+    /// them into sub-parser functions. These parse the structure of the
+    /// payload based on "next payload" fields and do not necessarily
+    /// rely on the length of the header or body. Therefore, a packet
+    /// must have both correct payload header information and inner
+    /// structural integrity; otherwise parsing will fail.
     pub fn try_parse(buf: &[u8]) -> Result<Self, ParserError> {
         let header = Header::ref_from_prefix(buf).ok_or(ParserError::BufferTooSmall)?;
         if header.version != IKE_2_VERSION_VALUE {
@@ -29,7 +37,11 @@ impl IKEv2<'_> {
                 }
                 PayloadType::SecurityAssociation => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
-                    let sa = SecurityAssociation::try_parse(v.as_slice())?;
+                    let sa = if v.is_empty() && l == size_of::<GenericPayloadHeader>() {
+                        SecurityAssociation { proposals: vec![] }
+                    } else {
+                        SecurityAssociation::try_parse(v.as_slice())?
+                    };
                     next_payload = n;
                     (Payload::SecurityAssociation(sa), l)
                 }
@@ -91,7 +103,7 @@ fn try_parse_generic(buf: &[u8]) -> ParserResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use crate::v2::definitions::params::ExchangeType;
-    use crate::v2::definitions::IKEv2;
+    use crate::v2::definitions::{IKEv2, Payload, SecurityAssociation};
 
     #[test]
     #[allow(clippy::unwrap_used)]
@@ -113,5 +125,33 @@ mod tests {
         assert_eq!(packet.exchange_type, ExchangeType::Informational);
         assert!(packet.response);
         assert_eq!(packet.payloads.len(), 0);
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn parse_empty_sa_in_packet() {
+        let buff = vec![
+            0x00, 0x04, 0xc0, 0x1d, 0xb4, 0x00, 0xb0, 0xc9, // initiator
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // responder
+            0x21, // next payload, Security Association
+            0x20, // version
+            0x22, // exchange type
+            0x08, // flags, 0b00001000
+            0x1b, 0xad, 0xc9, 0xee, // message ID
+            0x00, 0x00, 0x00, 0x1c, // length
+            0x00, 0x00, 0x00, 0x04, // Security Association (generic payload) header
+        ];
+        let packet = IKEv2::try_parse(buff.as_slice()).unwrap();
+        assert_eq!(packet.initiator_cookie, 1337133713371337);
+        assert_eq!(packet.responder_cookie, 0);
+        assert_eq!(packet.message_id, 0x1badc9ee);
+        assert_eq!(packet.exchange_type, ExchangeType::IkeSaInit);
+        assert!(!packet.response);
+        assert!(packet.initiator);
+        assert_eq!(packet.payloads.len(), 1);
+        assert_eq!(
+            packet.payloads[0],
+            Payload::SecurityAssociation(SecurityAssociation { proposals: vec![] })
+        );
     }
 }
