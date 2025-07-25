@@ -1,8 +1,8 @@
 use crate::v1::definitions::{GenericPayloadHeader, Header};
-use crate::v2::definitions::params::{ExchangeType, PayloadType};
+use crate::v2::definitions::params::{ExchangeType, PayloadType, FLAG_INITIATOR, FLAG_RESPONSE};
 use crate::v2::definitions::SecurityAssociation;
 use crate::v2::definitions::{IKEv2, Payload};
-use crate::v2::parser::ParserError;
+use crate::v2::parser::{ParserError, ParserResult};
 use crate::v2::IKE_2_VERSION_VALUE;
 use log::warn;
 use zerocopy::FromBytes;
@@ -13,6 +13,9 @@ impl IKEv2<'_> {
         let header = Header::ref_from_prefix(buf).ok_or(ParserError::BufferTooSmall)?;
         if header.version != IKE_2_VERSION_VALUE {
             return Err(ParserError::WrongProtocol);
+        }
+        if header.length.get() as usize != buf.len() {
+            warn!("Buffer length does not match header length");
         }
 
         let mut offset = size_of::<Header>();
@@ -25,9 +28,10 @@ impl IKEv2<'_> {
                     break;
                 }
                 PayloadType::SecurityAssociation => {
-                    let (v, l, n) = SecurityAssociation::try_parse(&buf[offset..])?;
+                    let (v, l, n) = try_parse_generic(&buf[offset..])?;
+                    let sa = SecurityAssociation::try_parse(v.as_slice())?;
                     next_payload = n;
-                    (Payload::SecurityAssociation(v), l)
+                    (Payload::SecurityAssociation(sa), l)
                 }
                 //PayloadType::KeyExchange => Payload::KeyExchange(KeyExchange::try_parse(buf)?),
                 PayloadType::Nonce => {
@@ -65,8 +69,8 @@ impl IKEv2<'_> {
             initiator_cookie: header.initiator_cookie.get(),
             responder_cookie: header.responder_cookie.get(),
             exchange_type: ExchangeType::try_from(header.exchange_type)?,
-            initiator: false, // TODO
-            response: false,  // TODO
+            initiator: header.flags & FLAG_INITIATOR == FLAG_INITIATOR,
+            response: header.flags & FLAG_RESPONSE == FLAG_RESPONSE,
             message_id: header.message_id.get(),
             payloads,
         })
@@ -74,7 +78,7 @@ impl IKEv2<'_> {
 }
 
 /// Helper to parse all packets that only have a generic header
-fn try_parse_generic(buf: &[u8]) -> Result<(Vec<u8>, usize, PayloadType), ParserError> {
+fn try_parse_generic(buf: &[u8]) -> ParserResult<Vec<u8>> {
     let header = GenericPayloadHeader::ref_from_prefix(buf).ok_or(ParserError::BufferTooSmall)?;
     let consumed = header.payload_length.get() as usize;
     Ok((
@@ -82,4 +86,32 @@ fn try_parse_generic(buf: &[u8]) -> Result<(Vec<u8>, usize, PayloadType), Parser
         consumed,
         PayloadType::try_from(header.next_payload)?,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::v2::definitions::params::ExchangeType;
+    use crate::v2::definitions::IKEv2;
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn parse_empty_packet() {
+        let buff = vec![
+            0x00, 0x04, 0xc0, 0x1d, 0xb4, 0x00, 0xb0, 0xc9, // initiator
+            0x00, 0x00, 0x00, 0x00, 0x11, 0xf1, 0x5b, 0xa3, // responder
+            0x00, // next payload
+            0x20, // version
+            0x25, // exchange type
+            0x20, // flags, 0b00100000
+            0x3b, 0x9a, 0xc9, 0xff, // message ID
+            0x00, 0x00, 0x00, 0x1c, // length
+        ];
+        let packet = IKEv2::try_parse(buff.as_slice()).unwrap();
+        assert_eq!(packet.initiator_cookie, 1337133713371337);
+        assert_eq!(packet.responder_cookie, 301030307);
+        assert_eq!(packet.message_id, 0x3b9ac9ff);
+        assert_eq!(packet.exchange_type, ExchangeType::Informational);
+        assert!(packet.response);
+        assert_eq!(packet.payloads.len(), 0);
+    }
 }

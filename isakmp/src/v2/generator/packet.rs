@@ -1,11 +1,13 @@
 use crate::v2::definitions::params::{PayloadType, FLAG_INITIATOR, FLAG_RESPONSE};
 use crate::v2::definitions::{Header, IKEv2};
 use crate::v2::generator::{GeneratorError, ESTIMATED_PAYLOAD_LENGTH};
+use crate::v2::IKE_2_VERSION_VALUE;
 use zerocopy::network_endian::{U32, U64};
 use zerocopy::AsBytes;
 
 impl IKEv2<'_> {
-    fn try_build(&self) -> Result<Vec<u8>, GeneratorError> {
+    /// Build a network-level packet from an [IKEv2] packet
+    pub fn try_build(&self) -> Result<Vec<u8>, GeneratorError> {
         if self.payloads.len() >= 255 {
             return Err(GeneratorError::TooManyPayloads);
         }
@@ -25,7 +27,7 @@ impl IKEv2<'_> {
                 None => PayloadType::NoNextPayload,
                 Some(t) => t.into(),
             } as u8,
-            version: 0b00100000, // IKEv2
+            version: IKE_2_VERSION_VALUE, // IKEv2
             exchange_type: self.exchange_type as u8,
             flags: (if self.initiator { FLAG_INITIATOR } else { 0 })
                 | (if self.response { FLAG_RESPONSE } else { 0 }),
@@ -46,6 +48,7 @@ mod tests {
     use crate::v2::definitions::IKEv2;
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn empty() {
         assert_eq!(
             IKEv2 {

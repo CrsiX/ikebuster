@@ -2,6 +2,7 @@
 
 #[cfg(not(doctest))]
 pub mod header;
+mod impls;
 pub mod params;
 
 pub use super::super::v1::definitions::GenericPayloadHeader;
@@ -31,6 +32,7 @@ pub enum UnparseableParameter {
 }
 
 /// High-level representation of an IKEv2 message (ISAKMP packet)
+#[derive(Debug, PartialEq)]
 pub struct IKEv2<'a> {
     /// Cookie of the entity initiating the establishment of the Security Association.
     /// The value is chosen by the initiator, and it MUST NOT be zero.
@@ -70,7 +72,9 @@ pub struct IKEv2<'a> {
 ///
 /// See [PayloadType] for the type definitions, all types listed there
 /// but not implemented here are simply not supported
+#[derive(Debug, PartialEq)]
 pub enum Payload<'a> {
+    /// Container for [SecurityAssociation]s
     SecurityAssociation(SecurityAssociation),
     KeyExchange(KeyExchange),
 
@@ -94,7 +98,8 @@ pub enum Payload<'a> {
 
 /// High-level representation of a Security Association
 ///
-/// See its [build] and [parse] methods and associated functions, respectively.
+/// See its [SecurityAssociation::try_build] and [SecurityAssociation::try_parse]
+/// methods and associated functions, respectively.
 ///
 /// A Security Association MAY contain multiple proposals. If there is
 /// more than one, they MUST be ordered from most preferred to least
@@ -111,6 +116,7 @@ pub enum Payload<'a> {
 /// ciphers and normal ciphers, it must include two proposals: one
 /// will have all the combined-mode ciphers, and the other will have all
 /// the normal ciphers with the integrity algorithms.
+#[derive(Debug, PartialEq)]
 pub struct SecurityAssociation {
     pub proposals: Vec<Proposal>,
 }
@@ -124,6 +130,7 @@ pub struct SecurityAssociation {
 /// and an encryption algorithm. For each Protocol, the set of
 /// permissible transforms is assigned Transform ID numbers, which appear
 /// in the header of each transform.
+#[derive(Debug, PartialEq)]
 pub struct Proposal {
     /// Identifier for the security protocol to be used in this proposal,
     /// must be [SecurityProtocol::InternetKeyExchange] to work in this project
@@ -131,12 +138,17 @@ pub struct Proposal {
     /// Optional sending entity's SPI (Security Parameter Index), currently not used
     /// for scanning and not needed to be duplicated from the [SecurityAssociation]
     pub spi: Vec<u8>,
-    /// Ordered list of transforms in this proposal
-    pub transforms: Vec<Transform>,
+
+    pub encryption_algorithms: Vec<(EncryptionAlgorithm, Option<u16>)>,
+    pub pseudo_random_functions: Vec<PseudorandomFunction>,
+    pub integrity_algorithms: Vec<IntegrityAlgorithm>,
+    pub key_exchange_methods: Vec<KeyExchangeMethod>,
+    pub sequence_numbers: Vec<SequenceNumberType>,
 }
 
 /// High-level representation of a transformation and all required additional
 /// information that is dynamically built from incoming packets. See [TransformType].
+#[derive(Debug, PartialEq)]
 pub enum Transform {
     Encryption(EncryptionAlgorithm, Option<u16>),
     PseudoRandomFunction(PseudorandomFunction),
@@ -145,12 +157,14 @@ pub enum Transform {
     SequenceNumber(SequenceNumberType),
 }
 
+#[derive(Debug, PartialEq)]
 pub(crate) enum Attribute {
     /// Key-length in bits for variable-length encryption ciphers like AES-CBC
     KeyLength(u16),
 }
 
 /// High-level representation of a Key Exchange
+#[derive(Debug, PartialEq)]
 pub struct KeyExchange {
     pub dh_group: KeyExchangeMethod,
     pub data: Vec<u8>,
@@ -160,6 +174,7 @@ pub struct KeyExchange {
 ///
 /// Error and status messages may have additional data, depending on their type.
 /// For this representation, these are not parsed and provided as [`Vec<u8>`] instead.
+#[derive(Debug, PartialEq)]
 pub struct Notification<'a> {
     pub variant: NotificationType,
     pub data: Vec<u8>,
@@ -167,10 +182,12 @@ pub struct Notification<'a> {
     pub spi: Option<&'a [u8]>,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum NotificationType {
     Error(NotifyErrorMessage),
     Status(NotifyStatusMessage),
 }
 
 // TODO
+#[derive(Debug, PartialEq)]
 pub struct Deletion {}

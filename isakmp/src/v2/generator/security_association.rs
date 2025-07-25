@@ -35,6 +35,7 @@ mod tests {
     use crate::v2::definitions::{Proposal, SecurityAssociation, Transform};
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn empty() {
         assert_eq!(
             SecurityAssociation { proposals: vec![] }
@@ -45,30 +46,18 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn empty_bodies() {
         assert_eq!(
             SecurityAssociation {
                 proposals: vec![
-                    Proposal {
-                        protocol: SecurityProtocol::InternetKeyExchange,
-                        spi: vec![],
-                        transforms: vec![],
-                    },
-                    Proposal {
-                        protocol: SecurityProtocol::InternetKeyExchange,
-                        spi: vec![],
-                        transforms: vec![],
-                    },
-                    Proposal {
-                        protocol: SecurityProtocol::AuthenticationHeader,
-                        spi: vec![],
-                        transforms: vec![],
-                    },
-                    Proposal {
-                        protocol: SecurityProtocol::EncapsulatingSecurityPayload,
-                        spi: vec![0x13, 0x37],
-                        transforms: vec![],
-                    }
+                    Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None),
+                    Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None),
+                    Proposal::new_empty(SecurityProtocol::AuthenticationHeader, None),
+                    Proposal::new_empty(
+                        SecurityProtocol::EncapsulatingSecurityPayload,
+                        Some(vec![0x13, 0x37])
+                    ),
                 ]
             }
             .try_build(PayloadType::NoNextPayload)
@@ -84,30 +73,27 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn simple_full() {
+        let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, Some(vec![0x42]));
+        p.add(vec![
+            Transform::Encryption(EncryptionAlgorithm::AesGcm16, Some(256)),
+            Transform::Integrity(IntegrityAlgorithm::HmacSha2_256_128),
+            Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_256),
+            Transform::KeyExchange(KeyExchangeMethod::Curve448),
+        ]);
         assert_eq!(
-            SecurityAssociation {
-                proposals: vec![Proposal {
-                    protocol: SecurityProtocol::InternetKeyExchange,
-                    spi: vec![0x42],
-                    transforms: vec![
-                        Transform::Encryption(EncryptionAlgorithm::AesGcm16, Some(256)),
-                        Transform::Integrity(IntegrityAlgorithm::HmacSha2_256_128),
-                        Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_256),
-                        Transform::KeyExchange(KeyExchangeMethod::Curve448)
-                    ],
-                }]
-            }
-            .try_build(PayloadType::KeyExchange)
-            .unwrap(),
+            SecurityAssociation { proposals: vec![p] }
+                .try_build(PayloadType::KeyExchange)
+                .unwrap(),
             vec![
                 0x22, 0x00, 0x00, 0x31, // Security Association header
                 0x00, 0x00, 0x00, 0x2d, 0x01, 0x01, 0x01, 0x04, // Proposal header
                 0x42, // SPI
                 0x03, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x14, // Transform 1
                 0x80, 0x0e, 0x01, 0x00, // Transform 1 attributes
-                0x03, 0x00, 0x00, 0x08, 0x03, 0x00, 0x00, 0x0c, // Transform 2
-                0x03, 0x00, 0x00, 0x08, 0x02, 0x00, 0x00, 0x05, // Transform 3
+                0x03, 0x00, 0x00, 0x08, 0x02, 0x00, 0x00, 0x05, // Transform 2
+                0x03, 0x00, 0x00, 0x08, 0x03, 0x00, 0x00, 0x0c, // Transform 3
                 0x00, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x20 // Transform 4
             ]
         )
