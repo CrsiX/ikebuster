@@ -21,13 +21,12 @@ impl SecurityAssociation {
         if proposal_header.proposal_num != 1 {
             return Err(ParserError::InvalidProposalNumberingStart);
         }
+        let proposal = Proposal::try_parse(proposal_header, &buf[offset..])?;
+        proposals.push(proposal);
+        offset += proposal_header.proposal_length.get() as usize;
+
         let mut more_proposals = proposal_header.last_substruct == FLAG_MORE_FOLLOWING_PROPOSALS;
-
         while more_proposals {
-            let proposal = Proposal::try_parse(&proposal_header, &buf[offset..])?;
-            proposals.push(proposal);
-            offset += proposal_header.proposal_length.get() as usize;
-
             let next_proposal_header = ProposalHeader::ref_from_prefix(&buf[offset..])
                 .ok_or(ParserError::BufferTooSmall)?;
             if next_proposal_header.proposal_num != 1 + proposal_header.proposal_num {
@@ -35,6 +34,9 @@ impl SecurityAssociation {
             }
             proposal_header = next_proposal_header;
             more_proposals = proposal_header.last_substruct == FLAG_MORE_FOLLOWING_PROPOSALS;
+            let proposal = Proposal::try_parse(proposal_header, &buf[offset..])?;
+            proposals.push(proposal);
+            offset += proposal_header.proposal_length.get() as usize;
         }
         Ok(Self { proposals })
     }
