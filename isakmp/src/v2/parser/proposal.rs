@@ -28,22 +28,6 @@ impl Proposal {
         let mut extra_key_exchange_methods = vec![];
         let mut sequence_numbers = vec![];
 
-        // TODO:
-        //    The number and type of transforms that accompany an SA payload are
-        //    dependent on the protocol in the SA itself.  An SA payload proposing
-        //    the establishment of an SA has the following mandatory and optional
-        //    Transform Types.  A compliant implementation MUST understand all
-        //    mandatory and optional types for each protocol it supports (though it
-        //    need not accept proposals with unacceptable suites).  A proposal MAY
-        //    omit the optional types if the only value for them it will accept is
-        //    NONE.
-        //
-        //    Protocol    Mandatory Types          Optional Types
-        //    ---------------------------------------------------
-        //    IKE         ENCR, PRF, INTEG*, D-H
-        //    ESP         ENCR, ESN                INTEG, D-H
-        //    AH          INTEG, ESN               D-H
-
         if body.is_empty() {
             return Ok(Self {
                 protocol,
@@ -148,6 +132,29 @@ impl Proposal {
             offset += t_size;
             next_transform = transform_header.last_substruct == FLAG_MORE_FOLLOWING_TRANSFORMS;
         }
+
+        match protocol {
+            // See section 3.3.3 of RFC 7296
+            SecurityProtocol::InternetKeyExchange => {
+                if encryption_algorithms.is_empty()
+                    || pseudo_random_functions.is_empty()
+                    || key_exchange_methods.is_empty()
+                {
+                    return Err(ParserError::MissingMandatoryTransform);
+                }
+            }
+            SecurityProtocol::AuthenticationHeader => {
+                if encryption_algorithms.is_empty() || sequence_numbers.is_empty() {
+                    return Err(ParserError::MissingMandatoryTransform);
+                }
+            }
+            SecurityProtocol::EncapsulatingSecurityPayload => {
+                if integrity_algorithms.is_empty() || sequence_numbers.is_empty() {
+                    return Err(ParserError::MissingMandatoryTransform);
+                }
+            }
+            _ => {}
+        };
 
         // TODO: extra_key_exchange_methods
 

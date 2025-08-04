@@ -30,7 +30,7 @@ pub(crate) const ESTIMATED_PROPOSAL_LENGTH: usize = 256;
 pub(crate) const EXPECTED_TRANSFORM_LENGTH: usize = 12;
 
 /// Failures when generating a network-level packet from an [IKEv2] struct
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 #[allow(missing_docs)]
 pub enum GeneratorError {
     #[error("SPI length exceeded 255 bytes")]
@@ -41,4 +41,6 @@ pub enum GeneratorError {
     TooManyProposals,
     #[error("At most 254 payloads are allowed in one packet")]
     TooManyPayloads,
+    #[error("One or more mandatory transformations are missing")]
+    MissingMandatoryTransform,
 }

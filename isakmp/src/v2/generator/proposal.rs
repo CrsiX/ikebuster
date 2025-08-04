@@ -1,6 +1,7 @@
 use crate::v2::definitions::header::ProposalHeader;
+use crate::v2::definitions::params::SecurityProtocol;
 use crate::v2::definitions::{Proposal, Transform};
-use crate::v2::generator::EXPECTED_TRANSFORM_LENGTH;
+use crate::v2::generator::{GeneratorError, EXPECTED_TRANSFORM_LENGTH};
 use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
 
@@ -12,7 +13,30 @@ impl Proposal {
     ///
     /// The argument `last` defines if any proposal is following this proposal (false)
     /// or if this proposal is the last proposal in the Security Association payload (true).
-    pub fn build(&self, num: u8, last: bool) -> Vec<u8> {
+    pub fn try_build(&self, num: u8, last: bool) -> Result<Vec<u8>, GeneratorError> {
+        match self.protocol {
+            // See section 3.3.3 of RFC 7296
+            SecurityProtocol::InternetKeyExchange => {
+                if self.encryption_algorithms.is_empty()
+                    || self.pseudo_random_functions.is_empty()
+                    || self.key_exchange_methods.is_empty()
+                {
+                    return Err(GeneratorError::MissingMandatoryTransform);
+                }
+            }
+            SecurityProtocol::AuthenticationHeader => {
+                if self.encryption_algorithms.is_empty() || self.sequence_numbers.is_empty() {
+                    return Err(GeneratorError::MissingMandatoryTransform);
+                }
+            }
+            SecurityProtocol::EncapsulatingSecurityPayload => {
+                if self.integrity_algorithms.is_empty() || self.sequence_numbers.is_empty() {
+                    return Err(GeneratorError::MissingMandatoryTransform);
+                }
+            }
+            _ => {}
+        };
+
         let mut transforms = Vec::with_capacity(EXPECTED_TRANSFORM_LENGTH * self.len());
         let chain_iterator = self
             .encryption_algorithms
@@ -62,7 +86,7 @@ impl Proposal {
         packet.extend_from_slice(header.as_bytes());
         packet.extend(self.spi.clone());
         packet.extend(transforms);
-        packet
+        Ok(packet)
     }
 }
 
@@ -72,42 +96,35 @@ mod tests {
         EncryptionAlgorithm, IntegrityAlgorithm, PseudorandomFunction,
     };
     use crate::v2::definitions::params::{KeyExchangeMethod, SecurityProtocol};
-    use crate::v2::definitions::Proposal;
+    use crate::v2::definitions::{Proposal, Transform};
+    use crate::v2::generator::GeneratorError::MissingMandatoryTransform;
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn empty() {
-        assert_eq!(
-            Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None).build(1, true),
-            vec![0x00, 0x00, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00]
-        );
-        assert_eq!(
-            Proposal::new_empty(SecurityProtocol::AuthenticationHeader, None).build(0x42, false),
-            vec![0x02, 0x00, 0x00, 0x08, 0x42, 0x02, 0x00, 0x00]
-        );
         assert_eq!(
             Proposal::new_empty(
                 SecurityProtocol::InternetKeyExchange,
                 Some(vec![0x13, 0x37])
             )
-            .build(1, true),
-            vec![0x00, 0x00, 0x00, 0x0a, 0x01, 0x01, 0x02, 0x00, 0x13, 0x37]
+            .try_build(1, true)
+            .unwrap_err(),
+            MissingMandatoryTransform
         );
     }
 
     #[test]
-    fn single() {
+    #[allow(clippy::unwrap_used)]
+    fn single_missing_others() {
         let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None);
         p.key_exchange_methods.push(KeyExchangeMethod::Curve448);
-        assert_eq!(
-            p.build(1, true),
-            vec![
-                0x00, 0x00, 0x00, 0x10, 0x01, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x04, 0x00,
-                0x00, 0x20
-            ]
-        );
+        let e = p.try_build(1, true);
+        assert!(e.is_err());
+        assert_eq!(e.err().unwrap(), MissingMandatoryTransform);
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn full() {
         let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None);
         p.encryption_algorithms
@@ -118,7 +135,7 @@ mod tests {
             .push(IntegrityAlgorithm::HmacSha2_256_128);
         p.key_exchange_methods.push(KeyExchangeMethod::Curve25519);
         assert_eq!(
-            p.build(4, true),
+            p.try_build(4, true).unwrap(),
             vec![
                 0x00, 0x00, 0x00, 0x2c, 0x04, 0x01, 0x00, 0x04, // proposal header
                 0x03, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x0c, // encryption header
@@ -126,6 +143,55 @@ mod tests {
                 0x03, 0x00, 0x00, 0x08, 0x02, 0x00, 0x00, 0x05, // integrity
                 0x03, 0x00, 0x00, 0x08, 0x03, 0x00, 0x00, 0x0c, // PRF
                 0x00, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x1f // KE
+            ]
+        );
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn full_also_with_duplicates() {
+        let mut p = Proposal::new_empty(
+            SecurityProtocol::InternetKeyExchange,
+            Some(vec![0x13, 0x37]),
+        );
+        p.add(vec![
+            Transform::Integrity(IntegrityAlgorithm::Aes256Gmac),
+            Transform::Encryption(EncryptionAlgorithm::CamelliaCbc, None),
+            Transform::Encryption(EncryptionAlgorithm::AesCcm16, Some(256)),
+            Transform::Encryption(EncryptionAlgorithm::AesGcm16, Some(128)),
+            Transform::Integrity(IntegrityAlgorithm::Aes256Gmac),
+            Transform::Integrity(IntegrityAlgorithm::Aes256Gmac),
+            Transform::KeyExchange(KeyExchangeMethod::Curve25519),
+            Transform::KeyExchange(KeyExchangeMethod::Curve448),
+            Transform::KeyExchange(KeyExchangeMethod::ModP4096),
+            Transform::PseudoRandomFunction(PseudorandomFunction::HmacStreebog512),
+            Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_512),
+        ]);
+        let result = p.try_build(100, true).unwrap();
+        assert_eq!(result.len(), 106);
+        assert_eq!(
+            result[..42],
+            vec![
+                0x00, 0x00, 0x00, 0x6a, 0x64, 0x01, 0x02, 0x0b, // proposal header
+                0x13, 0x37, // SPI
+                0x03, 0x00, 0x00, 0x08, 0x01, 0x00, 0x00, 0x17, // encryption 1
+                0x03, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x10, // encryption 2
+                0x80, 0x0e, 0x01, 0x00, // encryption 2 payload
+                0x03, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x14, // encryption 3
+                0x80, 0x0e, 0x00, 0x80, // encryption 3 payload
+            ]
+        );
+        assert_eq!(
+            result[42..],
+            vec![
+                0x03, 0x00, 0x00, 0x08, 0x02, 0x00, 0x00, 0x09, // PRF
+                0x03, 0x00, 0x00, 0x08, 0x02, 0x00, 0x00, 0x07, // PRF
+                0x03, 0x00, 0x00, 0x08, 0x03, 0x00, 0x00, 0x0b, // integrity 1
+                0x03, 0x00, 0x00, 0x08, 0x03, 0x00, 0x00, 0x0b, // integrity 2
+                0x03, 0x00, 0x00, 0x08, 0x03, 0x00, 0x00, 0x0b, // integrity 3
+                0x03, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x1f, // KE
+                0x03, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x20, // KE
+                0x00, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x10, // KE
             ]
         );
     }

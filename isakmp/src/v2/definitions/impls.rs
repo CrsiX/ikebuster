@@ -2,6 +2,7 @@ use crate::v2::definitions::params::SecurityProtocol;
 use crate::v2::definitions::{Proposal, Transform};
 
 impl Proposal {
+    /// Return the length of the [Proposal] as sum of the number of all its transform
     pub fn len(&self) -> usize {
         self.encryption_algorithms.len()
             + self.pseudo_random_functions.len()
@@ -10,6 +11,12 @@ impl Proposal {
             + self.sequence_numbers.len()
     }
 
+    /// Check whether the [Proposal] has no transforms at all
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Add a number of transforms to the [Proposal], grouping by the correct transform type
     pub fn add(&mut self, transforms: Vec<Transform>) {
         for transform in transforms {
             match transform {
@@ -22,6 +29,7 @@ impl Proposal {
         }
     }
 
+    /// Easily construct a new empty [Proposal] with the supplied protocol and SPI
     pub fn new_empty(protocol: SecurityProtocol, spi: Option<Vec<u8>>) -> Self {
         Self {
             protocol,

@@ -12,7 +12,7 @@ use crate::v2::definitions::UnparseableParameter;
 use thiserror::Error;
 
 /// Failure while parsing an [IKEv2] packet from network-level byte representation
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 #[allow(missing_docs)]
 pub enum ParserError {
     #[error("Buffer too small to parse the packet")]
@@ -29,6 +29,8 @@ pub enum ParserError {
     ProtocolViolation,
     #[error("Packet boundaries or inner structure malformed")]
     BoundaryError,
+    #[error("Proposal is missing a mandatory transform")]
+    MissingMandatoryTransform,
 }
 
 impl From<UnparseableParameter> for ParserError {

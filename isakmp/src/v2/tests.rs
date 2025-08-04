@@ -6,10 +6,12 @@ use crate::v2::definitions::{
     GenericPayloadHeader, IKEv2, Notification, NotificationType, Payload, Proposal,
     SecurityAssociation, Transform,
 };
+use crate::v2::generator::GeneratorError;
+use crate::v2::parser::ParserError;
 
 #[test]
 #[allow(clippy::unwrap_used)]
-fn generate_and_parse_sa() {
+fn generate_sa_to_failure() {
     let mut p = Proposal::new_empty(
         SecurityProtocol::InternetKeyExchange,
         Some(vec![0x13, 0x37]),
@@ -19,14 +21,28 @@ fn generate_and_parse_sa() {
         Some(128),
     )]);
     let sa = SecurityAssociation { proposals: vec![p] };
-    let generated_sa = sa.try_build(PayloadType::NoNextPayload).unwrap();
-    let parsed_sa = SecurityAssociation::try_parse(
-        generated_sa.as_slice()[size_of::<GenericPayloadHeader>()..]
-            .iter()
-            .as_slice(),
-    )
-    .unwrap();
-    assert_eq!(sa, parsed_sa);
+    let result = sa.try_build(PayloadType::NoNextPayload);
+    assert!(result.is_err());
+    assert_eq!(
+        result.unwrap_err(),
+        GeneratorError::MissingMandatoryTransform
+    );
+}
+
+#[test]
+#[allow(clippy::unwrap_used)]
+fn parse_sa_to_failure() {
+    let buf = vec![
+        0x00, 0x00, 0x00, 0x16, 0x01, 0x01, 0x02, 0x01, // Proposal
+        0x13, 0x37, // SPI
+        0x00, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x07, 0x80, 0xe, 0x00, 0x80, // transform 1
+    ];
+    let parsed_sa = SecurityAssociation::try_parse(&buf);
+    assert!(parsed_sa.is_err());
+    assert_eq!(
+        parsed_sa.unwrap_err(),
+        ParserError::MissingMandatoryTransform
+    );
 }
 
 #[test]
@@ -69,10 +85,14 @@ fn generate_and_parse_full_sa() {
 fn generate_and_parse_sa_with_many_empty_proposals() {
     let mut sa = SecurityAssociation { proposals: vec![] };
     for i in 0..100 {
-        sa.proposals.push(Proposal::new_empty(
-            SecurityProtocol::InternetKeyExchange,
-            Some(vec![i + 1]),
-        ));
+        let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, Some(vec![i + 1]));
+        p.add(vec![
+            Transform::Encryption(EncryptionAlgorithm::AesGcm12, Some(256)),
+            Transform::Integrity(IntegrityAlgorithm::HmacSha2_256_128),
+            Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_512),
+            Transform::KeyExchange(KeyExchangeMethod::EcpGroup521),
+        ]);
+        sa.proposals.push(p);
     }
     let generated_sa = sa.try_build(PayloadType::NoNextPayload).unwrap();
     let parsed_sa = SecurityAssociation::try_parse(

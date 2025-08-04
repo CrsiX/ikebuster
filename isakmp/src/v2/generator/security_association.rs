@@ -4,19 +4,18 @@ use crate::v2::generator::{GeneratorError, ESTIMATED_PROPOSAL_LENGTH};
 use zerocopy::AsBytes;
 
 impl SecurityAssociation {
+    /// Build a network-level packet from a [SecurityAssociation]#
+    ///
+    /// This might fail if the packet would not conform to the standard, for
+    /// example if a proposal doesn't provide all details required to build it,
+    /// or if too many of a certain type of structure is required
     pub fn try_build(&self, next_payload: PayloadType) -> Result<Vec<u8>, GeneratorError> {
-        // TODO:
-        //     Protocol    Mandatory Types          Optional Types
-        //     ---------------------------------------------------
-        //     IKE         ENCR, PRF, INTEG*, D-H
-        //     ESP         ENCR, ESN                INTEG, D-H
-        //     AH          INTEG, ESN               D-H
         if self.proposals.len() >= 255 {
             return Err(GeneratorError::TooManyProposals);
         }
         let mut proposals = Vec::with_capacity(ESTIMATED_PROPOSAL_LENGTH * self.proposals.len());
         for (i, proposal) in self.proposals.iter().enumerate() {
-            proposals.extend(proposal.build(i as u8 + 1, i == self.proposals.len() - 1));
+            proposals.extend(proposal.try_build(i as u8 + 1, i == self.proposals.len() - 1)?);
         }
 
         let packet_length = 4 + proposals.len() as u16;
@@ -48,33 +47,6 @@ mod tests {
                 .try_build(PayloadType::NoNextPayload)
                 .unwrap(),
             vec![0x00, 0x00, 0x00, 0x04]
-        )
-    }
-
-    #[test]
-    #[allow(clippy::unwrap_used)]
-    fn empty_bodies() {
-        assert_eq!(
-            SecurityAssociation {
-                proposals: vec![
-                    Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None),
-                    Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None),
-                    Proposal::new_empty(SecurityProtocol::AuthenticationHeader, None),
-                    Proposal::new_empty(
-                        SecurityProtocol::EncapsulatingSecurityPayload,
-                        Some(vec![0x13, 0x37])
-                    ),
-                ]
-            }
-            .try_build(PayloadType::NoNextPayload)
-            .unwrap(),
-            vec![
-                0x00, 0x00, 0x00, 0x26, // Security Association
-                0x02, 0x00, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, // Proposal 1
-                0x02, 0x00, 0x00, 0x08, 0x02, 0x01, 0x00, 0x00, // Proposal 2
-                0x02, 0x00, 0x00, 0x08, 0x03, 0x02, 0x00, 0x00, // Proposal 3
-                0x00, 0x00, 0x00, 0x0a, 0x04, 0x03, 0x02, 0x00, 0x13, 0x37 // Proposal 4
-            ]
         )
     }
 
