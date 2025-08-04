@@ -16,7 +16,8 @@ mod tests {
         SecurityProtocol,
     };
     use crate::v2::definitions::{
-        IKEv2, Notification, NotificationType, Payload, Proposal, SecurityAssociation, Transform,
+        GenericPayloadHeader, IKEv2, Notification, NotificationType, Payload, Proposal,
+        SecurityAssociation, Transform,
     };
 
     #[test]
@@ -32,7 +33,12 @@ mod tests {
         )]);
         let sa = SecurityAssociation { proposals: vec![p] };
         let generated_sa = sa.try_build(PayloadType::NoNextPayload).unwrap();
-        let parsed_sa = SecurityAssociation::try_parse(generated_sa.as_slice()).unwrap();
+        let parsed_sa = SecurityAssociation::try_parse(
+            generated_sa.as_slice()[size_of::<GenericPayloadHeader>()..]
+                .iter()
+                .as_slice(),
+        )
+        .unwrap();
         assert_eq!(sa, parsed_sa);
     }
 
@@ -66,7 +72,8 @@ mod tests {
             0x00, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x1f, // Transform 8, KE 2
         ];
         assert_eq!(sa_repr, buff);
-        let parsed_sa = SecurityAssociation::try_parse(&buff[4..]).unwrap();
+        let parsed_sa =
+            SecurityAssociation::try_parse(&buff[size_of::<GenericPayloadHeader>()..]).unwrap();
         assert_eq!(sa, parsed_sa);
     }
 
@@ -81,7 +88,12 @@ mod tests {
             ));
         }
         let generated_sa = sa.try_build(PayloadType::NoNextPayload).unwrap();
-        let parsed_sa = SecurityAssociation::try_parse(generated_sa.as_slice()).unwrap();
+        let parsed_sa = SecurityAssociation::try_parse(
+            generated_sa.as_slice()[size_of::<GenericPayloadHeader>()..]
+                .iter()
+                .as_slice(),
+        )
+        .unwrap();
         assert_eq!(sa, parsed_sa);
         assert_eq!(sa.proposals.len(), 100);
         for i in 0..100 {

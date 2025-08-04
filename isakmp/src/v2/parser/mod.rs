@@ -27,6 +27,8 @@ pub enum ParserError {
     InvalidProposalNumbering,
     #[error("Protocol behavior violated or invalid packet syntax")]
     ProtocolViolation,
+    #[error("Packet boundaries or inner structure malformed")]
+    BoundaryError,
 }
 
 impl From<UnparseableParameter> for ParserError {

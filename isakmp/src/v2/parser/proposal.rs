@@ -18,7 +18,9 @@ impl Proposal {
         let spi = Vec::from(&buf[header_len..header_len + spi_len]);
         let protocol = SecurityProtocol::try_from(header.protocol_id)?;
 
-        let body = &buf[header_len + spi_len..header_len + spi_len + body_len];
+        let body = &buf
+            .get(header_len + spi_len..header_len + spi_len + body_len)
+            .ok_or(ParserError::BoundaryError)?;
         let mut encryption_algorithms = vec![];
         let mut pseudo_random_functions = vec![];
         let mut integrity_algorithms = vec![];

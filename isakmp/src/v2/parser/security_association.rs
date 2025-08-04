@@ -41,3 +41,45 @@ impl SecurityAssociation {
         Ok(Self { proposals })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::v2::definitions::params::PseudorandomFunction;
+    use crate::v2::definitions::SecurityAssociation;
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn parse_sa_with_extra_attrs() {
+        let buf = vec![
+            //0x22, 0x00, 0x00, 0x50, // Security Association header
+            0x00, 0x00, 0x00, 0x60, 0x01, 0x01, 0x00, 0x08, // Proposal header
+            0x03, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x13, // Transform 1, encryption
+            0x80, 0x0e, 0x7a, 0x69, // Transform 1, encryption, attributes
+            0x03, 0x00, 0x00, 0x08, 0x02, 0x00, 0x00, 0x05, // Transform 2, PRF 1
+            0x03, 0x00, 0x00, 0x0c, 0x02, 0x00, 0x00, 0x06, // Transform 3, PRF 2
+            0x00, 0x00, 0x00, 0x00, // random data for transform 3 should be ignored
+            0x03, 0x00, 0x00, 0x08, 0x02, 0x00, 0x00, 0x07, // Transform 4, PRF 3
+            0x03, 0x00, 0x00, 0x08, 0x03, 0x00, 0x00, 0x0c, // Transform 5, integrity 1
+            0x03, 0x00, 0x00, 0x08, 0x03, 0x00, 0x00, 0x0e, // Transform 6, integrity 2
+            0x03, 0x00, 0x00, 0x18, 0x04, 0x00, 0x00, 0x20, // Transform 7, KE 1
+            0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, // random data for transform 7
+            0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, // random data for transform 7
+            0x00, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x1f, // Transform 8, KE 2
+        ];
+
+        let sa = SecurityAssociation::try_parse(&buf).unwrap();
+        assert_eq!(sa.proposals.len(), 1);
+        let p = &sa.proposals[0];
+        assert_eq!(p.spi.len(), 0);
+        assert_eq!(p.sequence_numbers.len(), 0);
+        assert_eq!(p.key_exchange_methods.len(), 2);
+        assert_eq!(
+            p.pseudo_random_functions,
+            vec![
+                PseudorandomFunction::HmacSha2_256,
+                PseudorandomFunction::HmacSha2_384,
+                PseudorandomFunction::HmacSha2_512
+            ]
+        );
+    }
+}
