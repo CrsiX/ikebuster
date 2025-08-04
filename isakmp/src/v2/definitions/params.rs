@@ -21,6 +21,13 @@ pub const FLAG_RESPONSE: u8 = 0b100000;
 /// flag must be zero for all officially described types found in the RFC; see RFC 7296, section 2.5
 pub const FLAG_CRITICAL: u8 = 0b10000000;
 
+/// Bitflag for the [super::header::AttributeHeader] that indicates
+/// whether the data attribute follows the Type/Length/Value (TLV) format or
+/// a shortened Type/Value (TV) format. If the AF bit is zero (0), then
+/// the attribute uses TLV format; if the AF bit is one (1), the TV
+/// format (with two-byte value) is used. Currently only TV is supported.
+pub const FLAG_ATTRIBUTE_FORMAT: u16 = 0b1000000000000000;
+
 /// Flag that specifies whether this is the last Proposal Substructure
 /// in the [SecurityAssociation]. The respective field has a value of 0
 /// if this was the last Proposal Substructure, and a value of 2 if
@@ -232,13 +239,21 @@ pub enum TransformType {
     IntegrityAlgorithm = 3,
     KeyExchangeMethod = 4,
     SequenceNumber = 5,
+    // RFC 9370
     AdditionalKeyExchange1 = 6,
+    // RFC 9370
     AdditionalKeyExchange2 = 7,
+    // RFC 9370
     AdditionalKeyExchange3 = 8,
+    // RFC 9370
     AdditionalKeyExchange4 = 9,
+    // RFC 9370
     AdditionalKeyExchange5 = 10,
+    // RFC 9370
     AdditionalKeyExchange6 = 11,
+    // RFC 9370
     AdditionalKeyExchange7 = 12,
+    // RFC 9370
     KeyWrapAlgorithm = 13,
     GroupControllerAuthenticationMethod = 14,
 }

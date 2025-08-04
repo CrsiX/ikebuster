@@ -74,7 +74,7 @@ mod tests {
         for i in 0..100 {
             sa.proposals.push(Proposal::new_empty(
                 SecurityProtocol::InternetKeyExchange,
-                Some(vec![i]),
+                Some(vec![i + 1]),
             ));
         }
         let generated_sa = sa.try_build(PayloadType::NoNextPayload).unwrap();
@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(sa, parsed_sa);
         assert_eq!(sa.proposals.len(), 100);
         for i in 0..100 {
-            assert_eq!(sa.proposals[i].spi[0], i as u8);
+            assert_eq!(sa.proposals[i].spi[0], 1 + i as u8);
         }
     }
 

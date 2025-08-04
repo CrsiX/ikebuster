@@ -5,6 +5,12 @@ use zerocopy::AsBytes;
 
 impl SecurityAssociation {
     pub fn try_build(&self, next_payload: PayloadType) -> Result<Vec<u8>, GeneratorError> {
+        // TODO:
+        //     Protocol    Mandatory Types          Optional Types
+        //     ---------------------------------------------------
+        //     IKE         ENCR, PRF, INTEG*, D-H
+        //     ESP         ENCR, ESN                INTEG, D-H
+        //     AH          INTEG, ESN               D-H
         if self.proposals.len() >= 255 {
             return Err(GeneratorError::TooManyProposals);
         }

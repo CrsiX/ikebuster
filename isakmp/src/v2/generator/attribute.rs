@@ -1,4 +1,4 @@
-use crate::v2::definitions::header::AttributeHeaderTV;
+use crate::v2::definitions::header::AttributeHeader;
 use crate::v2::definitions::params::AttributeType;
 use crate::v2::definitions::Attribute;
 use zerocopy::network_endian::U16;
@@ -8,7 +8,7 @@ impl Attribute {
     pub(crate) fn build(&self) -> Vec<u8> {
         match self {
             Attribute::KeyLength(length) => Vec::from(
-                AttributeHeaderTV {
+                AttributeHeader {
                     attribute_type: U16::new(AttributeType::KeyLength as u16 + 0x8000),
                     attribute_value: U16::new(*length),
                 }

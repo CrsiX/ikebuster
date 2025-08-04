@@ -41,7 +41,7 @@ impl Transform {
             ),
         };
 
-        let packet_length = 8 + attributes.len() as u16;
+        let packet_length = size_of::<TransformHeader>() as u16 + attributes.len() as u16;
         let header = TransformHeader {
             last_substruct: if last { 0 } else { 3 },
             reserved: 0,

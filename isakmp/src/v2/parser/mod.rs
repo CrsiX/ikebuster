@@ -2,6 +2,7 @@
 //!
 //! Use the [IKEv2::try_parse] associated function as an entrypoint.
 
+mod notification;
 mod packet;
 mod proposal;
 mod security_association;

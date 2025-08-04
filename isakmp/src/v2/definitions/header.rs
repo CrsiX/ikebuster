@@ -1,6 +1,6 @@
 //! Module containing network level header structs for pieces of the protocol
 
-use super::params::{KeyExchangeMethod, SecurityProtocol, TransformType};
+use super::params::{KeyExchangeMethod, SecurityProtocol, TransformType, FLAG_ATTRIBUTE_FORMAT};
 use zerocopy::network_endian::U16;
 use zerocopy::{AsBytes, FromBytes, FromZeroes, Unaligned};
 
@@ -88,7 +88,7 @@ pub struct TransformHeader {
     pub transform_id: U16,
 }
 
-/// Protocol field for fixed-length attributes of a Transform as per RFC 7296, section 3.3.5
+/// Protocol field for attributes of a Transform as per RFC 7296, section 3.3.5
 ///
 ///                         1                   2                   3
 ///      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -99,14 +99,26 @@ pub struct TransformHeader {
 ///     |                   AF=0  Attribute Value                       |
 ///     |                   AF=1  Not Transmitted                       |
 ///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// This header only includes the type and attribute length or fixed-size value in
+/// it. The fixed-length variant can be solely parsed using this header, while
+/// the variable-length variant requires extra parsing capabilities. The
+/// data for variable-length attributes is not stored in the header.
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
 #[repr(C, packed)]
-pub struct AttributeHeaderTV {
+pub struct AttributeHeader {
     /// Type of the attribute encoded in the value field; the top bit must be set to 1
     pub attribute_type: U16,
     /// Fixed-length attribute value specific for a transformation, currently only the
     /// key length is supported as valid attribute
     pub attribute_value: U16,
+}
+
+impl AttributeHeader {
+    /// Determine whether the fixed-length TV variant is used or the variable-length TLV variant
+    pub fn is_fixed_length(&self) -> bool {
+        u16::from(self.attribute_type) & FLAG_ATTRIBUTE_FORMAT == FLAG_ATTRIBUTE_FORMAT
+    }
 }
 
 /// Protocol header for key exchange payloads
