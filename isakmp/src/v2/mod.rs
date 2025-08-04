@@ -11,10 +11,13 @@ pub const IKE_2_VERSION_VALUE: u8 = 0b00100000;
 #[cfg(test)]
 mod tests {
     use crate::v2::definitions::params::{
-        EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod, PayloadType,
-        PseudorandomFunction, SecurityProtocol,
+        EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod,
+        NotifyErrorMessage, NotifyStatusMessage, PayloadType, PseudorandomFunction,
+        SecurityProtocol,
     };
-    use crate::v2::definitions::{IKEv2, Payload, Proposal, SecurityAssociation, Transform};
+    use crate::v2::definitions::{
+        IKEv2, Notification, NotificationType, Payload, Proposal, SecurityAssociation, Transform,
+    };
 
     #[test]
     #[allow(clippy::unwrap_used)]
@@ -84,6 +87,52 @@ mod tests {
         for i in 0..100 {
             assert_eq!(sa.proposals[i].spi[0], 1 + i as u8);
         }
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn generate_and_parse_notify() {
+        let spi = [0x00, 0x01, 0x02, 0x03];
+        let notify = Notification {
+            variant: NotificationType::Error(NotifyErrorMessage::InvalidSpi),
+            data: vec![0x13, 0x37],
+            protocol: SecurityProtocol::EncapsulatingSecurityPayload,
+            spi: Some(spi.to_vec()),
+        };
+        let generated_notify = notify.try_build(PayloadType::NoNextPayload).unwrap();
+        let expected_result = vec![
+            0x00, 0x00, 0x00, 0x0e, // Generic Payload Header
+            0x03, 0x04, 0x00, 0x0b, // Notification header
+            0x00, 0x01, 0x02, 0x03, // SPI
+            0x13, 0x37, // Data
+        ];
+        assert_eq!(generated_notify, expected_result);
+        let parsed_notify =
+            Notification::try_parse(expected_result.as_slice()[4..].iter().as_slice()).unwrap();
+        assert_eq!(notify, parsed_notify);
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn generate_and_parse_notify2() {
+        let notification = Notification {
+            variant: NotificationType::Status(NotifyStatusMessage::SignatureHashAlgorithms),
+            // Data meaning:
+            //   Supported Signature Hash Algorithm: SHA2-256 (2)
+            //   Supported Signature Hash Algorithm: SHA2-384 (3)
+            //   Supported Signature Hash Algorithm: SHA2-512 (4)
+            data: vec![0x00, 0x02, 0x00, 0x03, 0x00, 0x04],
+            protocol: SecurityProtocol::Reserved,
+            spi: None,
+        };
+        let generated_notify = notification.try_build(PayloadType::Notify).unwrap();
+        let expected_result = vec![
+            0x29, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x40, 0x2f, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04,
+        ];
+        assert_eq!(generated_notify, expected_result);
+        let parsed_notify =
+            Notification::try_parse(expected_result.as_slice()[4..].iter().as_slice()).unwrap();
+        assert_eq!(notification, parsed_notify);
     }
 
     #[test]

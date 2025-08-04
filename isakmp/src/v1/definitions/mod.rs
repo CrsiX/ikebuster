@@ -169,6 +169,8 @@ impl TryFrom<u8> for ExchangeType {
 ///
 /// For more information, take a look at:
 /// https://datatracker.ietf.org/doc/html/rfc2408#section-3.2
+///
+/// Since it is the same wire format, this packet is also used in IKEv2.
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
 #[repr(C, packed)]
 pub struct GenericPayloadHeader {

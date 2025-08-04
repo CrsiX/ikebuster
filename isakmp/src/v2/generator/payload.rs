@@ -5,7 +5,7 @@ use crate::v2::generator::GeneratorError;
 use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
 
-impl Payload<'_> {
+impl Payload {
     pub(crate) fn try_build(&self, next_payload: PayloadType) -> Result<Vec<u8>, GeneratorError> {
         if let Payload::Nonce(v) = self {
             if v.len() < 16 || v.len() > 256 {

@@ -33,7 +33,7 @@ pub enum UnparseableParameter {
 
 /// High-level representation of an IKEv2 message (ISAKMP packet)
 #[derive(Debug, PartialEq)]
-pub struct IKEv2<'a> {
+pub struct IKEv2 {
     /// Cookie of the entity initiating the establishment of the Security Association.
     /// The value is chosen by the initiator, and it MUST NOT be zero.
     pub initiator_cookie: u64,
@@ -65,7 +65,7 @@ pub struct IKEv2<'a> {
     /// because it is used to prevent message replay attacks.
     pub message_id: u32,
     /// Ordered list of payloads found in the IKEv2 packet
-    pub payloads: Vec<Payload<'a>>,
+    pub payloads: Vec<Payload>,
 }
 
 /// Generic payload of an IKE message including its types
@@ -73,7 +73,7 @@ pub struct IKEv2<'a> {
 /// See [PayloadType] for the type definitions, all types listed there
 /// but not implemented here are simply not supported
 #[derive(Debug, PartialEq)]
-pub enum Payload<'a> {
+pub enum Payload {
     /// Container for [SecurityAssociation]s
     SecurityAssociation(SecurityAssociation),
     KeyExchange(KeyExchange),
@@ -82,7 +82,7 @@ pub enum Payload<'a> {
     /// exchange and protect against replay attacks. The size of the Nonce Data
     /// MUST be between 16 and 256 octets, inclusive. Nonce values MUST NOT be reused.
     Nonce(Vec<u8>),
-    Notify(Notification<'a>),
+    Notify(Notification),
     Delete(Deletion),
 
     /// Vendor-defined constant value that allow clients to discover peers
@@ -175,11 +175,11 @@ pub struct KeyExchange {
 /// Error and status messages may have additional data, depending on their type.
 /// For this representation, these are not parsed and provided as [`Vec<u8>`] instead.
 #[derive(Debug, PartialEq)]
-pub struct Notification<'a> {
+pub struct Notification {
     pub variant: NotificationType,
     pub data: Vec<u8>,
     pub protocol: SecurityProtocol,
-    pub spi: Option<&'a [u8]>,
+    pub spi: Option<Vec<u8>>,
 }
 
 #[derive(Debug, PartialEq)]

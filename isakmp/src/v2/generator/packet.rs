@@ -5,7 +5,7 @@ use crate::v2::IKE_2_VERSION_VALUE;
 use zerocopy::network_endian::{U32, U64};
 use zerocopy::AsBytes;
 
-impl IKEv2<'_> {
+impl IKEv2 {
     /// Build a network-level packet from an [IKEv2] packet
     pub fn try_build(&self) -> Result<Vec<u8>, GeneratorError> {
         if self.payloads.len() >= 255 {

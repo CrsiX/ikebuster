@@ -50,6 +50,10 @@ pub const FLAG_MORE_FOLLOWING_PROPOSALS: u8 = 2;
 /// to look somewhat like the header of a payload.
 pub const FLAG_MORE_FOLLOWING_TRANSFORMS: u8 = 3;
 
+/// Constant of the first proposal number in a list of proposals of
+/// a Security Association, if any proposal is sent in the SA.
+pub const CONST_FIRST_PROPOSAL_NUMBER: u8 = 1;
+
 /// Type of the exchanged being used
 ///
 /// This constrains the payloads sent in each message in an exchange.
@@ -199,7 +203,7 @@ impl TryFrom<u8> for PayloadType {
     }
 }
 
-impl From<&Payload<'_>> for PayloadType {
+impl From<&Payload> for PayloadType {
     fn from(value: &Payload) -> Self {
         match value {
             Payload::SecurityAssociation(_) => Self::SecurityAssociation,
@@ -814,7 +818,8 @@ impl TryFrom<u16> for NotifyErrorMessage {
 /// Values for the security protocol identifiers
 ///
 /// These are used in a proposal to specify the type of protocol to use
-/// to negotiate the Security Association. Value 0 is reserved,
+/// to negotiate the Security Association. Value 0 is reserved but used
+/// in the protocol in various cases and thus not an error. The
 /// values 7-200 are unassigned and 201-255 reserved for private use.
 ///
 /// In this project, only [SecurityProtocol::InternetKeyExchange] is relevant.
@@ -824,6 +829,7 @@ impl TryFrom<u16> for NotifyErrorMessage {
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum SecurityProtocol {
+    Reserved = 0,
     InternetKeyExchange = 1,
     AuthenticationHeader = 2,
     EncapsulatingSecurityPayload = 3,
@@ -837,7 +843,7 @@ impl TryFrom<u8> for SecurityProtocol {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0 => Err(UnparseableParameter::Reserved),
+            0 => Ok(SecurityProtocol::Reserved),
             1 => Ok(SecurityProtocol::InternetKeyExchange),
             2 => Ok(SecurityProtocol::AuthenticationHeader),
             3 => Ok(SecurityProtocol::EncapsulatingSecurityPayload),

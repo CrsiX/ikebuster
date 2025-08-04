@@ -1,13 +1,13 @@
 use crate::v1::definitions::{GenericPayloadHeader, Header};
 use crate::v2::definitions::params::{ExchangeType, PayloadType, FLAG_INITIATOR, FLAG_RESPONSE};
-use crate::v2::definitions::SecurityAssociation;
 use crate::v2::definitions::{IKEv2, Payload};
+use crate::v2::definitions::{Notification, SecurityAssociation};
 use crate::v2::parser::{ParserError, ParserResult};
 use crate::v2::IKE_2_VERSION_VALUE;
 use log::warn;
 use zerocopy::FromBytes;
 
-impl IKEv2<'_> {
+impl IKEv2 {
     /// Parse a buffer into an [IKEv2] packet, if possible.
     ///
     /// The parser functionality considers the size of payloads noted in
@@ -47,7 +47,12 @@ impl IKEv2<'_> {
                     next_payload = n;
                     (Payload::Nonce(v), l)
                 }
-                //PayloadType::Notify => Payload::Notify(Notification::try_parse(buf)?),
+                PayloadType::Notify => {
+                    let (v, l, n) = try_parse_generic(&buf[offset..])?;
+                    let notification = Notification::try_parse(v.as_slice())?;
+                    next_payload = n;
+                    (Payload::Notify(notification), l)
+                }
                 //PayloadType::Delete => {}
                 PayloadType::VendorID => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;

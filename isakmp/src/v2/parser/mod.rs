@@ -25,6 +25,8 @@ pub enum ParserError {
     InvalidProposalNumberingStart,
     #[error("Proposal numbering doesn't increment by 1")]
     InvalidProposalNumbering,
+    #[error("Protocol behavior violated or invalid packet syntax")]
+    ProtocolViolation,
 }
 
 impl From<UnparseableParameter> for ParserError {

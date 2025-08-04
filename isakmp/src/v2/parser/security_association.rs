@@ -1,5 +1,5 @@
 use crate::v2::definitions::header::ProposalHeader;
-use crate::v2::definitions::params::FLAG_MORE_FOLLOWING_PROPOSALS;
+use crate::v2::definitions::params::{CONST_FIRST_PROPOSAL_NUMBER, FLAG_MORE_FOLLOWING_PROPOSALS};
 use crate::v2::definitions::{Proposal, SecurityAssociation};
 use crate::v2::parser::ParserError;
 use zerocopy::FromBytes;
@@ -18,7 +18,7 @@ impl SecurityAssociation {
         let mut proposals = vec![];
         let mut proposal_header =
             ProposalHeader::ref_from_prefix(buf).ok_or(ParserError::BufferTooSmall)?;
-        if proposal_header.proposal_num != 1 {
+        if proposal_header.proposal_num != CONST_FIRST_PROPOSAL_NUMBER {
             return Err(ParserError::InvalidProposalNumberingStart);
         }
         let proposal = Proposal::try_parse(proposal_header, &buf[offset..])?;

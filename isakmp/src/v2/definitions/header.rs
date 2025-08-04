@@ -202,4 +202,10 @@ pub struct NotifyHeader {
     pub notify_message_type: U16,
 }
 
+impl NotifyHeader {
+    pub fn is_error(&self) -> bool {
+        self.notify_message_type.get() < 16384
+    }
+}
+
 // TODO: Delete Header
