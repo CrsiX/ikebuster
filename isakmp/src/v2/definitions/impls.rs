@@ -57,4 +57,12 @@ impl Proposal {
             sequence_numbers: vec![],
         }
     }
+
+    /// Easily construct a new [Proposal] with the supplied protocol that is already configured
+    /// with the number of transforms grouped by the correct transform type but with an empty SPI
+    pub fn new_full(protocol: SecurityProtocol, transforms: Vec<Transform>) -> Self {
+        let mut new = Self::new_empty(protocol, None);
+        new.add(transforms);
+        new
+    }
 }

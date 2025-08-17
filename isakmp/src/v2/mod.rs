@@ -3,6 +3,8 @@
 pub mod definitions;
 pub mod generator;
 pub mod parser;
+pub mod utils;
+
 #[cfg(test)]
 mod tests;
 
