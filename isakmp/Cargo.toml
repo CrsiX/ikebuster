@@ -6,6 +6,9 @@ license = "MIT"
 authors = ["Niklas Pfister <git@omikron.dev>"]
 description = "Protocol implementation of isakmp"
 
+[lib]
+doctest = false
+
 [dependencies]
 # RNG
 rand = { version = "~0.9" }
