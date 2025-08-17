@@ -1,5 +1,7 @@
+use crate::v2::definitions::constants::{
+    CONST_FIRST_PROPOSAL_NUMBER, FLAG_MORE_FOLLOWING_PROPOSALS,
+};
 use crate::v2::definitions::header::ProposalHeader;
-use crate::v2::definitions::params::{CONST_FIRST_PROPOSAL_NUMBER, FLAG_MORE_FOLLOWING_PROPOSALS};
 use crate::v2::definitions::{Proposal, SecurityAssociation};
 use crate::v2::parser::ParserError;
 use zerocopy::FromBytes;

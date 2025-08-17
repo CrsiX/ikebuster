@@ -1,14 +1,13 @@
-use log::warn;
-use zerocopy::FromBytes;
-
+use crate::v2::definitions::constants::{FLAG_ATTRIBUTE_FORMAT, FLAG_MORE_FOLLOWING_TRANSFORMS};
 use crate::v2::definitions::header::{AttributeHeader, ProposalHeader, TransformHeader};
 use crate::v2::definitions::params::{
     AttributeType, EncryptionAlgorithm, IntegrityAlgorithm, KeyExchangeMethod,
     PseudorandomFunction, SecurityProtocol, SequenceNumberType, TransformType,
-    FLAG_ATTRIBUTE_FORMAT, FLAG_MORE_FOLLOWING_TRANSFORMS,
 };
 use crate::v2::definitions::Proposal;
 use crate::v2::parser::ParserError;
+use log::warn;
+use zerocopy::FromBytes;
 
 impl Proposal {
     pub(crate) fn try_parse(header: &ProposalHeader, buf: &[u8]) -> Result<Self, ParserError> {

@@ -1,4 +1,5 @@
-use crate::v2::definitions::params::{PayloadType, FLAG_INITIATOR, FLAG_RESPONSE};
+use crate::v2::definitions::constants::{FLAG_INITIATOR, FLAG_RESPONSE};
+use crate::v2::definitions::params::PayloadType;
 use crate::v2::definitions::{Header, IKEv2};
 use crate::v2::generator::{GeneratorError, ESTIMATED_PAYLOAD_LENGTH};
 use crate::v2::IKE_2_VERSION_VALUE;

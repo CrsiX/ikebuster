@@ -1,5 +1,21 @@
-use crate::v2::definitions::params::SecurityProtocol;
-use crate::v2::definitions::{Proposal, Transform};
+use crate::v2::definitions::params::{ExchangeType, SecurityProtocol};
+use crate::v2::definitions::{IKEv2, Payload, Proposal, Transform};
+
+impl IKEv2 {
+    /// Create a "hello" (`IKE_SA_INIT`) packet with the respective payloads that
+    /// can be sent to an IKEv2 receiver (server)
+    pub fn hello(payloads: Vec<Payload>) -> Self {
+        Self {
+            initiator_cookie: rand::random(),
+            responder_cookie: 0,
+            exchange_type: ExchangeType::IkeSaInit,
+            initiator: true,
+            response: false,
+            message_id: 0,
+            payloads,
+        }
+    }
+}
 
 impl Proposal {
     /// Return the length of the [Proposal] as sum of the number of all its transform

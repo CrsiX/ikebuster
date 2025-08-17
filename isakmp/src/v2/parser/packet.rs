@@ -1,5 +1,6 @@
 use crate::v1::definitions::{GenericPayloadHeader, Header};
-use crate::v2::definitions::params::{ExchangeType, PayloadType, FLAG_INITIATOR, FLAG_RESPONSE};
+use crate::v2::definitions::constants::{FLAG_INITIATOR, FLAG_RESPONSE};
+use crate::v2::definitions::params::{ExchangeType, PayloadType};
 use crate::v2::definitions::{CertificateRequest, IKEv2, KeyExchange, Payload};
 use crate::v2::definitions::{Notification, SecurityAssociation};
 use crate::v2::parser::{ParserError, ParserResult};

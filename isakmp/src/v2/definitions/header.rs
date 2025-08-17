@@ -1,6 +1,7 @@
 //! Module containing network level header structs for pieces of the protocol
 
-use super::params::{KeyExchangeMethod, SecurityProtocol, TransformType, FLAG_ATTRIBUTE_FORMAT};
+use super::params::{KeyExchangeMethod, SecurityProtocol, TransformType};
+use crate::v2::definitions::constants::FLAG_ATTRIBUTE_FORMAT;
 use zerocopy::network_endian::U16;
 use zerocopy::{AsBytes, FromBytes, FromZeroes, Unaligned};
 
