@@ -55,10 +55,10 @@ mod tests {
     fn simple_full() {
         let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, Some(vec![0x42]));
         p.add(vec![
-            Transform::Encryption(EncryptionAlgorithm::AesGcm16, Some(256)),
-            Transform::Integrity(IntegrityAlgorithm::HmacSha2_256_128),
-            Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_256),
-            Transform::KeyExchange(KeyExchangeMethod::Curve448),
+            Transform::Encryption(EncryptionAlgorithm::AES_GCM_16, Some(256)),
+            Transform::Integrity(IntegrityAlgorithm::HMAC_SHA2_256_128),
+            Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_SHA2_256),
+            Transform::KeyExchange(KeyExchangeMethod::Curve_448),
         ]);
         assert_eq!(
             SecurityAssociation { proposals: vec![p] }

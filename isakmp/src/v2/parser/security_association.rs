@@ -76,9 +76,9 @@ mod tests {
         assert_eq!(
             p.pseudo_random_functions,
             vec![
-                PseudorandomFunction::HmacSha2_256,
-                PseudorandomFunction::HmacSha2_384,
-                PseudorandomFunction::HmacSha2_512
+                PseudorandomFunction::HMAC_SHA2_256,
+                PseudorandomFunction::HMAC_SHA2_384,
+                PseudorandomFunction::HMAC_SHA2_512
             ]
         );
     }

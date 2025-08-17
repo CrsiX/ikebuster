@@ -67,11 +67,11 @@ mod tests {
     #[test]
     fn key_exchange() {
         assert_eq!(
-            Transform::KeyExchange(KeyExchangeMethod::Curve25519).build(true),
+            Transform::KeyExchange(KeyExchangeMethod::Curve_25519).build(true),
             vec![0x00, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x1f]
         );
         assert_eq!(
-            Transform::KeyExchange(KeyExchangeMethod::Curve25519).build(false),
+            Transform::KeyExchange(KeyExchangeMethod::Curve_25519).build(false),
             vec![0x03, 0x00, 0x00, 0x08, 0x04, 0x00, 0x00, 0x1f]
         );
     }
@@ -79,11 +79,11 @@ mod tests {
     #[test]
     fn encryption() {
         assert_eq!(
-            Transform::Encryption(EncryptionAlgorithm::CamelliaCtr, Some(192)).build(true),
+            Transform::Encryption(EncryptionAlgorithm::CAMELLIA_CTR, Some(192)).build(true),
             vec![0x00, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x18, 0x80, 0x0e, 0x00, 0xc0]
         );
         assert_eq!(
-            Transform::Encryption(EncryptionAlgorithm::AesCbc, Some(128)).build(false),
+            Transform::Encryption(EncryptionAlgorithm::AES_CBC, Some(128)).build(false),
             vec![0x03, 0x00, 0x00, 0x0c, 0x01, 0x00, 0x00, 0x0c, 0x80, 0x0e, 0x00, 0x80]
         )
     }

@@ -1,5 +1,6 @@
 //! IKEv2 parameters and their parsers as defined in the IANA IKEv2 list
-//! found at https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml
+//! found at https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml!
+//! Also take a look at RFC 8247, section 2.4 for further security considerations.
 
 use super::{Payload, Transform, UnparseableParameter};
 
@@ -344,40 +345,41 @@ impl TryFrom<u16> for AttributeType {
 #[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
 #[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
-#[allow(missing_docs)]
+#[allow(non_camel_case_types, missing_docs)]
 pub enum EncryptionAlgorithm {
-    DesIv64 = 1, // deprecated
-    Des = 2,     // deprecated
-    TripleDes = 3,
-    Rc5 = 4,        // deprecated
-    Idea = 5,       // deprecated
-    Cast = 6,       // deprecated
-    Blowfish = 7,   // deprecated
-    TripleIdea = 8, // deprecated
-    DesIv32 = 9,    // deprecated
-    Null = 11,      // not allowed
-    AesCbc = 12,
-    AesCtr = 13,
-    AesCcm8 = 14,
-    AesCcm12 = 15,
-    AesCcm16 = 16,
-    AesGcm8 = 18,
-    AesGcm12 = 19,
-    AesGcm16 = 20,
-    NullAuthAesGmac = 21, // not allowed
-    CamelliaCbc = 23,
-    CamelliaCtr = 24,
-    CamelliaCcm8 = 25,
-    CamelliaCcm12 = 26,
-    CamelliaCcm16 = 27,
-    Chacha20Poly1305 = 28,
-    AesCcm8IIV = 29,          // not allowed
-    AesGcm16IIV = 30,         // not allowed
-    Chacha20Poly1305IIV = 31, // not allowed
-    KuznyechikMgmKTree = 32,
-    MagmaMgmKTree = 33,
-    KuznyechikMgmMacKTree = 34, // not allowed
-    MagmaMgmMacKTree = 35,      // not allowed
+    DES_IV64 = 1, // deprecated
+    DES = 2,      // deprecated
+    TRIPLE_DES = 3,
+    RC5 = 4,         // deprecated
+    IDEA = 5,        // deprecated
+    CAST = 6,        // deprecated
+    BLOWFISH = 7,    // deprecated
+    TRIPLE_IDEA = 8, // deprecated
+    DES_IV32 = 9,    // deprecated
+    NULL = 11,       // not allowed
+    AES_CBC = 12,
+    AES_CTR = 13,
+    AES_CCM_8 = 14,
+    AES_CCM_12 = 15,
+    AES_CCM_16 = 16,
+    Unassigned = 17,
+    AES_GCM_8 = 18,
+    AES_GCM_12 = 19,
+    AES_GCM_16 = 20,
+    NULL_AUTH_AES_GMAC = 21, // not allowed
+    CAMELLIA_CBC = 23,
+    CAMELLIA_CTR = 24,
+    CAMELLIA_CCM_8 = 25,
+    CAMELLIA_CCM_12 = 26,
+    CAMELLIA_CCM_16 = 27,
+    CHACHA20_POLY1305 = 28,
+    AES_CCM_8_IIV = 29,         // not allowed
+    AES_GCM_16_IIV = 30,        // not allowed
+    CHACHA20_POLY1305_IIV = 31, // not allowed
+    KUZNYECHIK_MGM_KTREE = 32,
+    MAGMA_MGM_KTREE = 33,
+    KUZNYECHIK_MGM_MAC_KTREE = 34, // not allowed
+    MAGMA_MGM_MAC_KTREE = 35,      // not allowed
 }
 
 impl TryFrom<u16> for EncryptionAlgorithm {
@@ -386,41 +388,41 @@ impl TryFrom<u16> for EncryptionAlgorithm {
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
             0 => Err(UnparseableParameter::Reserved),
-            1 => Ok(EncryptionAlgorithm::DesIv64),
-            2 => Ok(EncryptionAlgorithm::Des),
-            3 => Ok(EncryptionAlgorithm::TripleDes),
-            4 => Ok(EncryptionAlgorithm::Rc5),
-            5 => Ok(EncryptionAlgorithm::Idea),
-            6 => Ok(EncryptionAlgorithm::Cast),
-            7 => Ok(EncryptionAlgorithm::Blowfish),
-            8 => Ok(EncryptionAlgorithm::TripleIdea),
-            9 => Ok(EncryptionAlgorithm::DesIv32),
+            1 => Ok(EncryptionAlgorithm::DES_IV64),
+            2 => Ok(EncryptionAlgorithm::DES),
+            3 => Ok(EncryptionAlgorithm::TRIPLE_DES),
+            4 => Ok(EncryptionAlgorithm::RC5),
+            5 => Ok(EncryptionAlgorithm::IDEA),
+            6 => Ok(EncryptionAlgorithm::CAST),
+            7 => Ok(EncryptionAlgorithm::BLOWFISH),
+            8 => Ok(EncryptionAlgorithm::TRIPLE_IDEA),
+            9 => Ok(EncryptionAlgorithm::DES_IV32),
             10 => Err(UnparseableParameter::Reserved),
-            11 => Ok(EncryptionAlgorithm::Null),
-            12 => Ok(EncryptionAlgorithm::AesCbc),
-            13 => Ok(EncryptionAlgorithm::AesCtr),
-            14 => Ok(EncryptionAlgorithm::AesCcm8),
-            15 => Ok(EncryptionAlgorithm::AesCcm12),
-            16 => Ok(EncryptionAlgorithm::AesCcm16),
+            11 => Ok(EncryptionAlgorithm::NULL),
+            12 => Ok(EncryptionAlgorithm::AES_CBC),
+            13 => Ok(EncryptionAlgorithm::AES_CTR),
+            14 => Ok(EncryptionAlgorithm::AES_CCM_8),
+            15 => Ok(EncryptionAlgorithm::AES_CCM_12),
+            16 => Ok(EncryptionAlgorithm::AES_CCM_16),
             17 => Err(UnparseableParameter::Unassigned),
-            18 => Ok(EncryptionAlgorithm::AesGcm8),
-            19 => Ok(EncryptionAlgorithm::AesGcm12),
-            20 => Ok(EncryptionAlgorithm::AesGcm16),
-            21 => Ok(EncryptionAlgorithm::NullAuthAesGmac),
+            18 => Ok(EncryptionAlgorithm::AES_GCM_8),
+            19 => Ok(EncryptionAlgorithm::AES_GCM_12),
+            20 => Ok(EncryptionAlgorithm::AES_GCM_16),
+            21 => Ok(EncryptionAlgorithm::NULL_AUTH_AES_GMAC),
             22 => Err(UnparseableParameter::Reserved),
-            23 => Ok(EncryptionAlgorithm::CamelliaCbc),
-            24 => Ok(EncryptionAlgorithm::CamelliaCtr),
-            25 => Ok(EncryptionAlgorithm::CamelliaCcm8),
-            26 => Ok(EncryptionAlgorithm::CamelliaCcm12),
-            27 => Ok(EncryptionAlgorithm::CamelliaCcm16),
-            28 => Ok(EncryptionAlgorithm::Chacha20Poly1305),
-            29 => Ok(EncryptionAlgorithm::AesCcm8IIV),
-            30 => Ok(EncryptionAlgorithm::AesGcm16IIV),
-            31 => Ok(EncryptionAlgorithm::Chacha20Poly1305IIV),
-            32 => Ok(EncryptionAlgorithm::KuznyechikMgmKTree),
-            33 => Ok(EncryptionAlgorithm::MagmaMgmKTree),
-            34 => Ok(EncryptionAlgorithm::KuznyechikMgmMacKTree),
-            35 => Ok(EncryptionAlgorithm::MagmaMgmMacKTree),
+            23 => Ok(EncryptionAlgorithm::CAMELLIA_CBC),
+            24 => Ok(EncryptionAlgorithm::CAMELLIA_CTR),
+            25 => Ok(EncryptionAlgorithm::CAMELLIA_CCM_8),
+            26 => Ok(EncryptionAlgorithm::CAMELLIA_CCM_12),
+            27 => Ok(EncryptionAlgorithm::CAMELLIA_CCM_16),
+            28 => Ok(EncryptionAlgorithm::CHACHA20_POLY1305),
+            29 => Ok(EncryptionAlgorithm::AES_CCM_8_IIV),
+            30 => Ok(EncryptionAlgorithm::AES_GCM_16_IIV),
+            31 => Ok(EncryptionAlgorithm::CHACHA20_POLY1305_IIV),
+            32 => Ok(EncryptionAlgorithm::KUZNYECHIK_MGM_KTREE),
+            33 => Ok(EncryptionAlgorithm::MAGMA_MGM_KTREE),
+            34 => Ok(EncryptionAlgorithm::KUZNYECHIK_MGM_MAC_KTREE),
+            35 => Ok(EncryptionAlgorithm::MAGMA_MGM_MAC_KTREE),
             36..=1023 => Err(UnparseableParameter::Unassigned),
             1024..=65535 => Err(UnparseableParameter::PrivateUse),
         }
@@ -435,17 +437,17 @@ impl TryFrom<u16> for EncryptionAlgorithm {
 #[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
 #[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
-#[allow(missing_docs)]
+#[allow(non_camel_case_types, missing_docs)]
 pub enum PseudorandomFunction {
-    HmacMd5 = 1, // deprecated
-    HmacSha1 = 2,
-    HmacTiger = 3, // deprecated
-    Aes128Xcbc = 4,
-    HmacSha2_256 = 5,
-    HmacSha2_384 = 6,
-    HmacSha2_512 = 7,
-    Aes128Cmac = 8,
-    HmacStreebog512 = 9,
+    HMAC_MD5 = 1, // deprecated
+    HMAC_SHA1 = 2,
+    HMAC_TIGER = 3, // deprecated
+    AES128_XCBC = 4,
+    HMAC_SHA2_256 = 5,
+    HMAC_SHA2_384 = 6,
+    HMAC_SHA2_512 = 7,
+    AES128_CMAC = 8,
+    HMAC_STREEBOG_512 = 9,
 }
 
 impl TryFrom<u16> for PseudorandomFunction {
@@ -454,15 +456,15 @@ impl TryFrom<u16> for PseudorandomFunction {
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
             0 => Err(UnparseableParameter::Reserved),
-            1 => Ok(PseudorandomFunction::HmacMd5),
-            2 => Ok(PseudorandomFunction::HmacSha1),
-            3 => Ok(PseudorandomFunction::HmacTiger),
-            4 => Ok(PseudorandomFunction::Aes128Xcbc),
-            5 => Ok(PseudorandomFunction::HmacSha2_256),
-            6 => Ok(PseudorandomFunction::HmacSha2_384),
-            7 => Ok(PseudorandomFunction::HmacSha2_512),
-            8 => Ok(PseudorandomFunction::Aes128Cmac),
-            9 => Ok(PseudorandomFunction::HmacStreebog512),
+            1 => Ok(PseudorandomFunction::HMAC_MD5),
+            2 => Ok(PseudorandomFunction::HMAC_SHA1),
+            3 => Ok(PseudorandomFunction::HMAC_TIGER),
+            4 => Ok(PseudorandomFunction::AES128_XCBC),
+            5 => Ok(PseudorandomFunction::HMAC_SHA2_256),
+            6 => Ok(PseudorandomFunction::HMAC_SHA2_384),
+            7 => Ok(PseudorandomFunction::HMAC_SHA2_512),
+            8 => Ok(PseudorandomFunction::AES128_CMAC),
+            9 => Ok(PseudorandomFunction::HMAC_STREEBOG_512),
             10..=1023 => Err(UnparseableParameter::Unassigned),
             1024..=65535 => Err(UnparseableParameter::PrivateUse),
         }
@@ -478,23 +480,23 @@ impl TryFrom<u16> for PseudorandomFunction {
 #[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
 #[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
-#[allow(missing_docs)]
+#[allow(non_camel_case_types, missing_docs)]
 pub enum IntegrityAlgorithm {
-    None = 0,
-    HmacMd5_96 = 1, // deprecated
-    HmacSha1_96 = 2,
-    DesMac = 3,  // deprecated
-    KpdkMd5 = 4, // deprecated
-    AesXcbc96 = 5,
-    HmacMd5_128 = 6,  // deprecated
-    HmacSha1_160 = 7, // deprecated
-    AesCmac96 = 8,
-    Aes128Gmac = 9,
-    Aes192Gmac = 10,
-    Aes256Gmac = 11,
-    HmacSha2_256_128 = 12,
-    HmacSha2_384_192 = 13,
-    HmacSha2_512_256 = 14,
+    NONE = 0,
+    HMAC_MD5_96 = 1, // deprecated
+    HMAC_SHA1_96 = 2,
+    DES_MAC = 3,  // deprecated
+    KPDK_MD5 = 4, // deprecated
+    AES_XCBC_96 = 5,
+    HMAC_MD5_128 = 6,  // deprecated
+    HMAC_SHA1_160 = 7, // deprecated
+    AES_CMAC_96 = 8,
+    AES_128_GMAC = 9,
+    AES_192_GMAC = 10,
+    AES_256_GMAC = 11,
+    HMAC_SHA2_256_128 = 12,
+    HMAC_SHA2_384_192 = 13,
+    HMAC_SHA2_512_256 = 14,
 }
 
 impl TryFrom<u16> for IntegrityAlgorithm {
@@ -502,21 +504,21 @@ impl TryFrom<u16> for IntegrityAlgorithm {
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(IntegrityAlgorithm::None),
-            1 => Ok(IntegrityAlgorithm::HmacMd5_96),
-            2 => Ok(IntegrityAlgorithm::HmacSha1_96),
-            3 => Ok(IntegrityAlgorithm::DesMac),
-            4 => Ok(IntegrityAlgorithm::KpdkMd5),
-            5 => Ok(IntegrityAlgorithm::AesXcbc96),
-            6 => Ok(IntegrityAlgorithm::HmacMd5_128),
-            7 => Ok(IntegrityAlgorithm::HmacSha1_160),
-            8 => Ok(IntegrityAlgorithm::AesCmac96),
-            9 => Ok(IntegrityAlgorithm::Aes128Gmac),
-            10 => Ok(IntegrityAlgorithm::Aes192Gmac),
-            11 => Ok(IntegrityAlgorithm::Aes256Gmac),
-            12 => Ok(IntegrityAlgorithm::HmacSha2_256_128),
-            13 => Ok(IntegrityAlgorithm::HmacSha2_384_192),
-            14 => Ok(IntegrityAlgorithm::HmacSha2_512_256),
+            0 => Ok(IntegrityAlgorithm::NONE),
+            1 => Ok(IntegrityAlgorithm::HMAC_MD5_96),
+            2 => Ok(IntegrityAlgorithm::HMAC_SHA1_96),
+            3 => Ok(IntegrityAlgorithm::DES_MAC),
+            4 => Ok(IntegrityAlgorithm::KPDK_MD5),
+            5 => Ok(IntegrityAlgorithm::AES_XCBC_96),
+            6 => Ok(IntegrityAlgorithm::HMAC_MD5_128),
+            7 => Ok(IntegrityAlgorithm::HMAC_SHA1_160),
+            8 => Ok(IntegrityAlgorithm::AES_CMAC_96),
+            9 => Ok(IntegrityAlgorithm::AES_128_GMAC),
+            10 => Ok(IntegrityAlgorithm::AES_192_GMAC),
+            11 => Ok(IntegrityAlgorithm::AES_256_GMAC),
+            12 => Ok(IntegrityAlgorithm::HMAC_SHA2_256_128),
+            13 => Ok(IntegrityAlgorithm::HMAC_SHA2_384_192),
+            14 => Ok(IntegrityAlgorithm::HMAC_SHA2_512_256),
             15..=1023 => Err(UnparseableParameter::Unassigned),
             1024..=65535 => Err(UnparseableParameter::PrivateUse),
         }
@@ -538,36 +540,36 @@ impl TryFrom<u16> for IntegrityAlgorithm {
 #[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
 #[derive(Serialize, Deserialize)] // Serialization
 #[repr(u16)]
-#[allow(missing_docs)]
+#[allow(non_camel_case_types, missing_docs)]
 pub enum KeyExchangeMethod {
     None = 0,
-    ModP768 = 1, // deprecated
-    ModP1024 = 2,
-    ModP1536 = 5,
-    ModP2048 = 14,
-    ModP3072 = 15,
-    ModP4096 = 16,
-    ModP6144 = 17,
-    ModP8192 = 18,
-    EcpGroup256 = 19,
-    EcpGroup384 = 20,
-    EcpGroup521 = 21,
-    ModP1024with160Prime = 22, // deprecated
-    ModP2048with224Prime = 23,
-    ModP2048with256Prime = 24,
-    EcpGroup192 = 25,
-    EcpGroup224 = 26,
-    BrainPoolP224 = 27,
-    BrainPoolP256 = 28,
-    BrainPoolP384 = 29,
-    BrainPoolP512 = 30,
-    Curve25519 = 31,
-    Curve448 = 32,
-    Gost310_256 = 33,
-    Gost310_512 = 34,
-    MlKem512 = 35,
-    MlKem768 = 36,
-    MlKem1024 = 37,
+    ModP_768 = 1, // deprecated
+    ModP_1024 = 2,
+    ModP_1536 = 5,
+    ModP_2048 = 14,
+    ModP_3072 = 15,
+    ModP_4096 = 16,
+    ModP_6144 = 17,
+    ModP_8192 = 18,
+    ECP_Random_256 = 19,
+    ECP_Random_384 = 20,
+    ECP_Random_521 = 21,
+    ModP_1024_Prime_160 = 22, // deprecated
+    ModP_2048_Prime_224 = 23, // unsafe
+    ModP_2048_Prime_256 = 24, // unsafe
+    ECP_Random_192 = 25,
+    ECP_Random_224 = 26,
+    ECP_Brainpool_224 = 27,
+    ECP_Brainpool_256 = 28,
+    ECP_Brainpool_384 = 29,
+    ECP_Brainpool_512 = 30,
+    Curve_25519 = 31,
+    Curve_448 = 32,
+    GOST3410_2012_256 = 33,
+    GOST3410_2012_512 = 34,
+    ML_KEM512 = 35,
+    ML_KEM_768 = 36,
+    ML_KEM1024 = 37,
 }
 
 impl TryFrom<u16> for KeyExchangeMethod {
@@ -576,35 +578,35 @@ impl TryFrom<u16> for KeyExchangeMethod {
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(KeyExchangeMethod::None),
-            1 => Ok(KeyExchangeMethod::ModP768),
-            2 => Ok(KeyExchangeMethod::ModP1024),
+            1 => Ok(KeyExchangeMethod::ModP_768),
+            2 => Ok(KeyExchangeMethod::ModP_1024),
             3..=4 => Err(UnparseableParameter::Reserved),
-            5 => Ok(KeyExchangeMethod::ModP1536),
+            5 => Ok(KeyExchangeMethod::ModP_1536),
             6..=13 => Err(UnparseableParameter::Unassigned),
-            14 => Ok(KeyExchangeMethod::ModP2048),
-            15 => Ok(KeyExchangeMethod::ModP3072),
-            16 => Ok(KeyExchangeMethod::ModP4096),
-            17 => Ok(KeyExchangeMethod::ModP6144),
-            18 => Ok(KeyExchangeMethod::ModP8192),
-            19 => Ok(KeyExchangeMethod::EcpGroup256),
-            20 => Ok(KeyExchangeMethod::EcpGroup384),
-            21 => Ok(KeyExchangeMethod::EcpGroup521),
-            22 => Ok(KeyExchangeMethod::ModP1024with160Prime),
-            23 => Ok(KeyExchangeMethod::ModP2048with224Prime),
-            24 => Ok(KeyExchangeMethod::ModP2048with256Prime),
-            25 => Ok(KeyExchangeMethod::EcpGroup192),
-            26 => Ok(KeyExchangeMethod::EcpGroup224),
-            27 => Ok(KeyExchangeMethod::BrainPoolP224),
-            28 => Ok(KeyExchangeMethod::BrainPoolP256),
-            29 => Ok(KeyExchangeMethod::BrainPoolP384),
-            30 => Ok(KeyExchangeMethod::BrainPoolP512),
-            31 => Ok(KeyExchangeMethod::Curve25519),
-            32 => Ok(KeyExchangeMethod::Curve448),
-            33 => Ok(KeyExchangeMethod::Gost310_256),
-            34 => Ok(KeyExchangeMethod::Gost310_512),
-            35 => Ok(KeyExchangeMethod::MlKem512),
-            36 => Ok(KeyExchangeMethod::MlKem768),
-            37 => Ok(KeyExchangeMethod::MlKem1024),
+            14 => Ok(KeyExchangeMethod::ModP_2048),
+            15 => Ok(KeyExchangeMethod::ModP_3072),
+            16 => Ok(KeyExchangeMethod::ModP_4096),
+            17 => Ok(KeyExchangeMethod::ModP_6144),
+            18 => Ok(KeyExchangeMethod::ModP_8192),
+            19 => Ok(KeyExchangeMethod::ECP_Random_256),
+            20 => Ok(KeyExchangeMethod::ECP_Random_384),
+            21 => Ok(KeyExchangeMethod::ECP_Random_521),
+            22 => Ok(KeyExchangeMethod::ModP_1024_Prime_160),
+            23 => Ok(KeyExchangeMethod::ModP_2048_Prime_224),
+            24 => Ok(KeyExchangeMethod::ModP_2048_Prime_256),
+            25 => Ok(KeyExchangeMethod::ECP_Random_192),
+            26 => Ok(KeyExchangeMethod::ECP_Random_224),
+            27 => Ok(KeyExchangeMethod::ECP_Brainpool_224),
+            28 => Ok(KeyExchangeMethod::ECP_Brainpool_256),
+            29 => Ok(KeyExchangeMethod::ECP_Brainpool_384),
+            30 => Ok(KeyExchangeMethod::ECP_Brainpool_512),
+            31 => Ok(KeyExchangeMethod::Curve_25519),
+            32 => Ok(KeyExchangeMethod::Curve_448),
+            33 => Ok(KeyExchangeMethod::GOST3410_2012_256),
+            34 => Ok(KeyExchangeMethod::GOST3410_2012_512),
+            35 => Ok(KeyExchangeMethod::ML_KEM512),
+            36 => Ok(KeyExchangeMethod::ML_KEM_768),
+            37 => Ok(KeyExchangeMethod::ML_KEM1024),
             38..=1023 => Err(UnparseableParameter::Unassigned),
             1024..=65535 => Err(UnparseableParameter::PrivateUse),
         }
@@ -697,14 +699,14 @@ impl TryFrom<u8> for CertificateEncoding {
 /// values 201-255 are reserved for private use.
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u8)]
-#[allow(missing_docs)]
+#[allow(non_camel_case_types, missing_docs)]
 pub enum AuthenticationMethod {
     RSADigitalSignature = 1,
     SharedKeyMessageIntegrityCode = 2,
     DSSDigitalSignature = 3,
-    ECDSAWithSHA256 = 9,  // with P-256 curve
-    ECDSAWithSHA384 = 10, // with P-384 curve
-    ECDSAWithSHA512 = 11, // with P-521 curve
+    ECDSA_SHA_256_ECP_256 = 9,
+    ECDSA_SHA_384_ECP_384 = 10,
+    ECDSA_SHA_512_ECP_521 = 11,
     GenericSecurePassword = 12,
     NULLAuthentication = 13,
     DigitalSignature = 14,
@@ -720,9 +722,9 @@ impl TryFrom<u8> for AuthenticationMethod {
             2 => Ok(AuthenticationMethod::SharedKeyMessageIntegrityCode),
             3 => Ok(AuthenticationMethod::DSSDigitalSignature),
             4..=8 => Err(UnparseableParameter::Unassigned),
-            9 => Ok(AuthenticationMethod::ECDSAWithSHA256),
-            10 => Ok(AuthenticationMethod::ECDSAWithSHA384),
-            11 => Ok(AuthenticationMethod::ECDSAWithSHA512),
+            9 => Ok(AuthenticationMethod::ECDSA_SHA_256_ECP_256),
+            10 => Ok(AuthenticationMethod::ECDSA_SHA_384_ECP_384),
+            11 => Ok(AuthenticationMethod::ECDSA_SHA_512_ECP_521),
             12 => Ok(AuthenticationMethod::GenericSecurePassword),
             13 => Ok(AuthenticationMethod::NULLAuthentication),
             14 => Ok(AuthenticationMethod::DigitalSignature),

@@ -17,7 +17,7 @@ fn generate_sa_to_failure() {
         Some(vec![0x13, 0x37]),
     );
     p.add(vec![Transform::Encryption(
-        EncryptionAlgorithm::Blowfish,
+        EncryptionAlgorithm::BLOWFISH,
         Some(128),
     )]);
     let sa = SecurityAssociation { proposals: vec![p] };
@@ -50,14 +50,14 @@ fn parse_sa_to_failure() {
 fn generate_and_parse_full_sa() {
     let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, Some(vec![]));
     p.add(vec![
-        Transform::Integrity(IntegrityAlgorithm::HmacSha2_256_128),
-        Transform::Integrity(IntegrityAlgorithm::HmacSha2_512_256),
-        Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_256),
-        Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_384),
-        Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_512),
-        Transform::KeyExchange(KeyExchangeMethod::Curve448),
-        Transform::KeyExchange(KeyExchangeMethod::Curve25519),
-        Transform::Encryption(EncryptionAlgorithm::AesGcm12, Some(31337)),
+        Transform::Integrity(IntegrityAlgorithm::HMAC_SHA2_256_128),
+        Transform::Integrity(IntegrityAlgorithm::HMAC_SHA2_512_256),
+        Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_SHA2_256),
+        Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_SHA2_384),
+        Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_SHA2_512),
+        Transform::KeyExchange(KeyExchangeMethod::Curve_448),
+        Transform::KeyExchange(KeyExchangeMethod::Curve_25519),
+        Transform::Encryption(EncryptionAlgorithm::AES_GCM_12, Some(31337)),
     ]);
     let sa = SecurityAssociation { proposals: vec![p] };
     let sa_repr = sa.try_build(PayloadType::KeyExchange).unwrap();
@@ -87,10 +87,10 @@ fn generate_and_parse_sa_with_many_empty_proposals() {
     for i in 0..100 {
         let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, Some(vec![i + 1]));
         p.add(vec![
-            Transform::Encryption(EncryptionAlgorithm::AesGcm12, Some(256)),
-            Transform::Integrity(IntegrityAlgorithm::HmacSha2_256_128),
-            Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_512),
-            Transform::KeyExchange(KeyExchangeMethod::EcpGroup521),
+            Transform::Encryption(EncryptionAlgorithm::AES_GCM_12, Some(256)),
+            Transform::Integrity(IntegrityAlgorithm::HMAC_SHA2_256_128),
+            Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_SHA2_512),
+            Transform::KeyExchange(KeyExchangeMethod::ECP_Random_521),
         ]);
         sa.proposals.push(p);
     }

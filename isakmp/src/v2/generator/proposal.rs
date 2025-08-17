@@ -117,7 +117,7 @@ mod tests {
     #[allow(clippy::unwrap_used)]
     fn single_missing_others() {
         let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None);
-        p.key_exchange_methods.push(KeyExchangeMethod::Curve448);
+        p.key_exchange_methods.push(KeyExchangeMethod::Curve_448);
         let e = p.try_build(1, true);
         assert!(e.is_err());
         assert_eq!(e.err().unwrap(), MissingMandatoryTransform);
@@ -128,12 +128,12 @@ mod tests {
     fn full() {
         let mut p = Proposal::new_empty(SecurityProtocol::InternetKeyExchange, None);
         p.encryption_algorithms
-            .push((EncryptionAlgorithm::AesCbc, Some(256)));
+            .push((EncryptionAlgorithm::AES_CBC, Some(256)));
         p.pseudo_random_functions
-            .push(PseudorandomFunction::HmacSha2_256);
+            .push(PseudorandomFunction::HMAC_SHA2_256);
         p.integrity_algorithms
-            .push(IntegrityAlgorithm::HmacSha2_256_128);
-        p.key_exchange_methods.push(KeyExchangeMethod::Curve25519);
+            .push(IntegrityAlgorithm::HMAC_SHA2_256_128);
+        p.key_exchange_methods.push(KeyExchangeMethod::Curve_25519);
         assert_eq!(
             p.try_build(4, true).unwrap(),
             vec![
@@ -155,17 +155,17 @@ mod tests {
             Some(vec![0x13, 0x37]),
         );
         p.add(vec![
-            Transform::Integrity(IntegrityAlgorithm::Aes256Gmac),
-            Transform::Encryption(EncryptionAlgorithm::CamelliaCbc, None),
-            Transform::Encryption(EncryptionAlgorithm::AesCcm16, Some(256)),
-            Transform::Encryption(EncryptionAlgorithm::AesGcm16, Some(128)),
-            Transform::Integrity(IntegrityAlgorithm::Aes256Gmac),
-            Transform::Integrity(IntegrityAlgorithm::Aes256Gmac),
-            Transform::KeyExchange(KeyExchangeMethod::Curve25519),
-            Transform::KeyExchange(KeyExchangeMethod::Curve448),
-            Transform::KeyExchange(KeyExchangeMethod::ModP4096),
-            Transform::PseudoRandomFunction(PseudorandomFunction::HmacStreebog512),
-            Transform::PseudoRandomFunction(PseudorandomFunction::HmacSha2_512),
+            Transform::Integrity(IntegrityAlgorithm::AES_256_GMAC),
+            Transform::Encryption(EncryptionAlgorithm::CAMELLIA_CBC, None),
+            Transform::Encryption(EncryptionAlgorithm::AES_CCM_16, Some(256)),
+            Transform::Encryption(EncryptionAlgorithm::AES_GCM_16, Some(128)),
+            Transform::Integrity(IntegrityAlgorithm::AES_256_GMAC),
+            Transform::Integrity(IntegrityAlgorithm::AES_256_GMAC),
+            Transform::KeyExchange(KeyExchangeMethod::Curve_25519),
+            Transform::KeyExchange(KeyExchangeMethod::Curve_448),
+            Transform::KeyExchange(KeyExchangeMethod::ModP_4096),
+            Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_STREEBOG_512),
+            Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_SHA2_512),
         ]);
         let result = p.try_build(100, true).unwrap();
         assert_eq!(result.len(), 106);
