@@ -1,10 +1,10 @@
 use crate::v1::definitions::{GenericPayloadHeader, Header};
 use crate::v2::definitions::params::{ExchangeType, PayloadType, FLAG_INITIATOR, FLAG_RESPONSE};
-use crate::v2::definitions::{IKEv2, Payload};
+use crate::v2::definitions::{CertificateRequest, IKEv2, KeyExchange, Payload};
 use crate::v2::definitions::{Notification, SecurityAssociation};
 use crate::v2::parser::{ParserError, ParserResult};
 use crate::v2::IKE_2_VERSION_VALUE;
-use log::warn;
+use log::{debug, warn};
 use zerocopy::FromBytes;
 
 impl IKEv2 {
@@ -39,30 +39,36 @@ impl IKEv2 {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
                     let sa = SecurityAssociation::try_parse(v.as_slice())?;
                     next_payload = n;
-                    (Payload::SecurityAssociation(sa), l)
+                    (Some(Payload::SecurityAssociation(sa)), l)
                 }
                 PayloadType::KeyExchange => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
                     let ke = KeyExchange::try_parse(v.as_slice())?;
                     next_payload = n;
-                    (Payload::KeyExchange(ke), l)
+                    (Some(Payload::KeyExchange(ke)), l)
+                }
+                PayloadType::CertificateRequest => {
+                    let (v, l, n) = try_parse_generic(&buf[offset..])?;
+                    let cr = CertificateRequest::try_parse(v.as_slice())?;
+                    next_payload = n;
+                    (Some(Payload::CertificateRequest(cr)), l)
                 }
                 PayloadType::Nonce => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
                     next_payload = n;
-                    (Payload::Nonce(v), l)
+                    (Some(Payload::Nonce(v)), l)
                 }
                 PayloadType::Notify => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
                     let notification = Notification::try_parse(v.as_slice())?;
                     next_payload = n;
-                    (Payload::Notify(notification), l)
+                    (Some(Payload::Notify(notification)), l)
                 }
                 //PayloadType::Delete => {}
                 PayloadType::VendorID => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
                     next_payload = n;
-                    (Payload::VendorID(v), l)
+                    (Some(Payload::VendorID(v)), l)
                 }
                 PayloadType::EncryptedAndAuthenticated => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
@@ -72,15 +78,20 @@ impl IKEv2 {
                         warn!("Found a payload after Encrypted payload, which is illegal: {n:#?}");
                     }
                     next_payload = PayloadType::NoNextPayload;
-                    (Payload::EncryptedAndAuthenticated(v), l)
+                    (Some(Payload::EncryptedAndAuthenticated(v)), l)
                 }
                 _ => {
                     warn!("Unknown payload type ignored: {next_payload:#?}");
-                    continue;
+                    let (v, l, n) = try_parse_generic(&buf[offset..])?;
+                    debug!("Raw data of ignored payload: {v:#?}");
+                    next_payload = n;
+                    (None, l)
                 }
             };
             offset += current_size;
-            payloads.push(decoded_payload);
+            if let Some(p) = decoded_payload {
+                payloads.push(p);
+            }
         }
 
         Ok(Self {

@@ -4,7 +4,7 @@
 
 use super::{Payload, Transform, UnparseableParameter};
 
-use serde::{Deserialize, Serialize};
+use strum::{Display, EnumIter};
 
 /// Bitflag for IKEv2 (ISAKMP) header to indicate whether the sender of the packet is
 /// an initiator (bit set) or a responder (bit not set); see RFC 7296, section 3.1
@@ -60,7 +60,7 @@ pub const CONST_FIRST_PROPOSAL_NUMBER: u8 = 1;
 /// This constrains the payloads sent in each message in an exchange.
 /// Notably, values 0-33 are reserved, 45-239 are currently unassigned
 /// and 240-255 reserved for private use. Also see [UnparseableParameter].
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Display, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum ExchangeType {
@@ -117,7 +117,7 @@ impl TryFrom<u8> for ExchangeType {
 /// Refer to https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml
 /// for details. Notably, values 1-33 are reserved, 55-127 are currently unassigned
 /// and 128-255 reserved for private use. Also see [UnparseableParameter].
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Display, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum PayloadType {
@@ -209,6 +209,7 @@ impl From<&Payload> for PayloadType {
         match value {
             Payload::SecurityAssociation(_) => Self::SecurityAssociation,
             Payload::KeyExchange(_) => Self::KeyExchange,
+            Payload::CertificateRequest(_) => Self::CertificateRequest,
             Payload::Nonce(_) => Self::Nonce,
             Payload::Notify(_) => Self::Notify,
             Payload::Delete(_) => Self::Delete,
@@ -235,7 +236,7 @@ impl From<&Payload> for PayloadType {
 /// "Sequence Numbers (SN)" transform type was originally named
 /// "Extended Sequence Numbers (ESN)" and was referenced by
 /// that name in a number of RFCs published before RFC 9370.
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Display, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum TransformType {
@@ -306,9 +307,7 @@ impl From<&Transform> for TransformType {
 ///
 /// Values 0-13 and 15-17 are reserved, 19-16383 are unassigned and
 /// 16384-32767 reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum AttributeType {
@@ -341,9 +340,7 @@ impl TryFrom<u16> for AttributeType {
 ///
 /// Values 0, 10 and 22 are reserved, 17 and 36-1023 are unassigned
 /// and 1024-65535 are reserved for private use. See also [UnparseableParameter].
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum EncryptionAlgorithm {
@@ -433,9 +430,7 @@ impl TryFrom<u16> for EncryptionAlgorithm {
 ///
 /// To find out requirement levels for PRFs for IKEv2, see RFC 8247.
 /// Values 0 is reserved, 10-1023 are unassigned and 1024-65535 reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum PseudorandomFunction {
@@ -476,9 +471,7 @@ impl TryFrom<u16> for PseudorandomFunction {
 /// To find out requirement levels for encryption algorithms for
 /// ESP/AH, see RFC 8221. For IKEv2, see RFC 8247.
 /// Values 15-1023 are unassigned and 1024-65535 reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum IntegrityAlgorithm {
@@ -536,9 +529,7 @@ impl TryFrom<u16> for IntegrityAlgorithm {
 /// transform type and by all "Additional Key Exchange (ADDKE)"
 /// transform types. To find out requirement levels for key
 /// exchange methods for IKEv2, see RFC 8247.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum KeyExchangeMethod {
@@ -618,9 +609,7 @@ impl TryFrom<u16> for KeyExchangeMethod {
 /// The default is likely to be [SequenceNumberType::Sequential32bit],
 /// as it was originally called "No Extended Sequence Numbers".
 /// Values 3-1023 are unassigned and 1024-65535 are reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum SequenceNumberType {
@@ -646,7 +635,7 @@ impl TryFrom<u16> for SequenceNumberType {
 /// Indicator for the encoding of certificates and related data
 ///
 /// Values 0 and 5 are reserved, 16-200 are unassigned and 201-255 are reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum CertificateEncoding {
@@ -697,7 +686,7 @@ impl TryFrom<u8> for CertificateEncoding {
 ///
 /// Value 0 is reserved, values 4-8 and 15-200 are unassigned and
 /// values 201-255 are reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Display, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u8)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum AuthenticationMethod {
@@ -738,9 +727,7 @@ impl TryFrom<u8> for AuthenticationMethod {
 ///
 /// The values 0, 2, 3, 6, 8, 10, 12, 13, 15, 16, 18-23, 25-33 are reserved.
 /// Values 50-8191 are currently unassigned and 8192-65535 reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum NotifyErrorMessage {
@@ -825,9 +812,7 @@ impl TryFrom<u16> for NotifyErrorMessage {
 /// values 7-200 are unassigned and 201-255 reserved for private use.
 ///
 /// In this project, only [SecurityProtocol::InternetKeyExchange] is relevant.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum SecurityProtocol {
@@ -861,19 +846,17 @@ impl TryFrom<u8> for SecurityProtocol {
 /// Values for the hash algorithm identifier
 ///
 /// Values 0 are reserved, 8-1023 unassigned and 1024-65535 reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum HashAlgorithm {
-    Sha1 = 1,
-    Sha2_256 = 2,
-    Sha2_384 = 3,
-    Sha2_512 = 4,
+    SHA1 = 1,
+    SHA2_256 = 2,
+    SHA2_384 = 3,
+    SHA2_512 = 4,
     Identity = 5,
-    Streebog256 = 6,
-    Streebog512 = 7,
+    Streebog_256 = 6,
+    Streebog_512 = 7,
 }
 
 impl TryFrom<u16> for HashAlgorithm {
@@ -882,13 +865,13 @@ impl TryFrom<u16> for HashAlgorithm {
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
             0 => Err(UnparseableParameter::Reserved),
-            1 => Ok(HashAlgorithm::Sha1),
-            2 => Ok(HashAlgorithm::Sha2_256),
-            3 => Ok(HashAlgorithm::Sha2_384),
-            4 => Ok(HashAlgorithm::Sha2_512),
+            1 => Ok(HashAlgorithm::SHA1),
+            2 => Ok(HashAlgorithm::SHA2_256),
+            3 => Ok(HashAlgorithm::SHA2_384),
+            4 => Ok(HashAlgorithm::SHA2_512),
             5 => Ok(HashAlgorithm::Identity),
-            6 => Ok(HashAlgorithm::Streebog256),
-            7 => Ok(HashAlgorithm::Streebog512),
+            6 => Ok(HashAlgorithm::Streebog_256),
+            7 => Ok(HashAlgorithm::Streebog_512),
             8..=1023 => Err(UnparseableParameter::Unassigned),
             1024..=65535 => Err(UnparseableParameter::PrivateUse),
         }
@@ -903,9 +886,7 @@ impl TryFrom<u16> for HashAlgorithm {
 ///
 /// Values 0-16383 are out of range, 16447-40959 currently unassigned and
 /// 40960-65535 reserved for private use.
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)] // Base
-#[derive(strum::EnumIter, strum::Display)] // Enumerate over variants + display implementation
-#[derive(Serialize, Deserialize)] // Serialization
+#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum NotifyStatusMessage {

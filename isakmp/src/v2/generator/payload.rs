@@ -15,6 +15,9 @@ impl Payload {
         match self {
             Payload::SecurityAssociation(v) => v.try_build(next_payload),
             Payload::KeyExchange(v) => Ok(v.build(next_payload)),
+            Payload::CertificateRequest(_v) => {
+                todo!()
+            }
             Payload::Notify(v) => v.try_build(next_payload),
             Payload::Delete(v) => Ok(v.build(next_payload)),
             Payload::Nonce(v) | Payload::VendorID(v) | Payload::EncryptedAndAuthenticated(v) => {

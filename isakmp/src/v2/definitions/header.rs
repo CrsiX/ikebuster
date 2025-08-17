@@ -151,7 +151,25 @@ pub struct KeyExchangeHeader {
     pub reserved: U16,
 }
 
-// TODO: Certificate Header
+/// Protocol header for Certificate Request as well as Certificate Payload payloads
+///
+///                          1                   2                   3
+///      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Cert Encoding |                                               |
+///     +-+-+-+-+-+-+-+-+                                               |
+///     ~          Certificate Data / Certification Authority           ~
+///     |                                                               |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// Section 3.6 and 3.7 of RFC 7296 use this payload type. The variable-length
+/// data is not part of the header and needs separate parsing; thus, the header
+/// only consist of a single `u8` field.
+#[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
+#[repr(C, packed)]
+pub struct CertificateHeader {
+    pub encoding: u8,
+}
 
 /// Protocol header for notify payloads
 ///

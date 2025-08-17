@@ -7,7 +7,9 @@ pub mod params;
 
 pub use super::super::v1::definitions::GenericPayloadHeader;
 pub use super::super::v1::definitions::Header;
-use crate::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage};
+use crate::v2::definitions::params::{
+    CertificateEncoding, NotifyErrorMessage, NotifyStatusMessage,
+};
 use params::{
     EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod, PayloadType,
     PseudorandomFunction, SecurityProtocol, SequenceNumberType, TransformType,
@@ -77,6 +79,7 @@ pub enum Payload {
     /// Container for [SecurityAssociation]s
     SecurityAssociation(SecurityAssociation),
     KeyExchange(KeyExchange),
+    CertificateRequest(CertificateRequest),
 
     /// Container for random data used to guarantee liveness during an
     /// exchange and protect against replay attacks. The size of the Nonce Data
@@ -168,6 +171,13 @@ pub(crate) enum Attribute {
 pub struct KeyExchange {
     pub dh_group: KeyExchangeMethod,
     pub data: Vec<u8>,
+}
+
+/// High-level representation of a Certificate Request
+#[derive(Debug, PartialEq)]
+pub struct CertificateRequest {
+    pub encoding: CertificateEncoding,
+    pub certification_authority: Vec<u8>,
 }
 
 /// High-level representation of notifications between peers
