@@ -41,7 +41,12 @@ impl IKEv2 {
                     next_payload = n;
                     (Payload::SecurityAssociation(sa), l)
                 }
-                //PayloadType::KeyExchange => Payload::KeyExchange(KeyExchange::try_parse(buf)?),
+                PayloadType::KeyExchange => {
+                    let (v, l, n) = try_parse_generic(&buf[offset..])?;
+                    let ke = KeyExchange::try_parse(v.as_slice())?;
+                    next_payload = n;
+                    (Payload::KeyExchange(ke), l)
+                }
                 PayloadType::Nonce => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
                     next_payload = n;
