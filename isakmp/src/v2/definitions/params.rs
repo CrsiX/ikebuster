@@ -310,7 +310,6 @@ pub enum EncryptionAlgorithm {
     AES_CCM_8 = 14,
     AES_CCM_12 = 15,
     AES_CCM_16 = 16,
-    Unassigned = 17,
     AES_GCM_8 = 18,
     AES_GCM_12 = 19,
     AES_GCM_16 = 20,
@@ -509,9 +508,9 @@ pub enum KeyExchangeMethod {
     Curve_448 = 32,
     GOST3410_2012_256 = 33,
     GOST3410_2012_512 = 34,
-    ML_KEM512 = 35,
+    ML_KEM_512 = 35,
     ML_KEM_768 = 36,
-    ML_KEM1024 = 37,
+    ML_KEM_1024 = 37,
 }
 
 impl TryFrom<u16> for KeyExchangeMethod {
@@ -546,9 +545,9 @@ impl TryFrom<u16> for KeyExchangeMethod {
             32 => Ok(KeyExchangeMethod::Curve_448),
             33 => Ok(KeyExchangeMethod::GOST3410_2012_256),
             34 => Ok(KeyExchangeMethod::GOST3410_2012_512),
-            35 => Ok(KeyExchangeMethod::ML_KEM512),
+            35 => Ok(KeyExchangeMethod::ML_KEM_512),
             36 => Ok(KeyExchangeMethod::ML_KEM_768),
-            37 => Ok(KeyExchangeMethod::ML_KEM1024),
+            37 => Ok(KeyExchangeMethod::ML_KEM_1024),
             38..=1023 => Err(UnparseableParameter::Unassigned),
             1024..=65535 => Err(UnparseableParameter::PrivateUse),
         }
