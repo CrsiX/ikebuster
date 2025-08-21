@@ -34,6 +34,7 @@ use crate::utils::payload_to_transforms::payload_to_transforms;
 
 mod recv;
 pub mod utils;
+pub mod v2;
 
 /// The results of the scan
 #[derive(Debug, Clone)]
@@ -168,7 +169,11 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
                             }
                             ReceiveError::InvalidMessage(err) => {
                                 trace!("Could not parse incoming message: {err}");
-                            }}
+                            }
+                            ReceiveError::InvalidMessageV2(err) => {
+                                trace!("Could not parse incoming message: {err}");
+                            }
+                        }
                     }
                 }
             }
@@ -209,8 +214,8 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
                         open.insert(initiator_cookie, transforms);
                         socket.send(&msg).await.map_err(ScanError::Send)?;
 
-                    }}
-
+                    }
+                }
             }
         }
     }

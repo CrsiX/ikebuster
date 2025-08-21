@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use isakmp::v1::parser::definitions::Packet;
 use isakmp::v1::parser::errors::IsakmpParseError;
+use isakmp::v2::parser::ParserError;
 use thiserror::Error;
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::UnboundedSender;
@@ -49,4 +50,6 @@ pub enum ReceiveError {
     Io(#[from] io::Error),
     #[error("Error while parsing message: {0}")]
     InvalidMessage(#[from] IsakmpParseError),
+    #[error("Error while parsing message v2: {0}")]
+    InvalidMessageV2(#[from] ParserError),
 }
