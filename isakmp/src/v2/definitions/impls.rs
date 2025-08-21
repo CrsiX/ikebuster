@@ -1,3 +1,5 @@
+use crate::v2::definitions::constants::MINIMAL_NOTIFY_STATUS_MESSAGE_VALUE;
+use crate::v2::definitions::header::NotifyHeader;
 use crate::v2::definitions::params::{
     EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod, PseudorandomFunction,
     SecurityProtocol,
@@ -200,5 +202,13 @@ impl KeyExchangeMethod {
             KeyExchangeMethod::ML_KEM_768 => 96, // unverified
             KeyExchangeMethod::ML_KEM_1024 => 128, // unverified
         }
+    }
+}
+
+impl NotifyHeader {
+    /// Determine if a [NotifyHeader] is a [Status](super::NotificationType::Status)
+    /// or an [Error](super::NotificationType::Error) message
+    pub fn is_error(&self) -> bool {
+        self.notify_message_type.get() < MINIMAL_NOTIFY_STATUS_MESSAGE_VALUE
     }
 }

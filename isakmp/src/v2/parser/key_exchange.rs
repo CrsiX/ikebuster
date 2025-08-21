@@ -8,10 +8,9 @@ impl KeyExchange {
     /// Parses a buffer into a [KeyExchange]. The buffer must not contain the
     /// generic payload header. Fails if the buffer is empty.
     pub(crate) fn try_parse(buf: &[u8]) -> Result<Self, ParserError> {
-        let ke_header =
-            KeyExchangeHeader::ref_from_prefix(buf).ok_or(ParserError::BufferTooSmall)?;
+        let header = KeyExchangeHeader::ref_from_prefix(buf).ok_or(ParserError::BufferTooSmall)?;
         Ok(Self {
-            dh_group: KeyExchangeMethod::try_from(ke_header.dh_group_num.get())?,
+            dh_group: KeyExchangeMethod::try_from(header.dh_group_num.get())?,
             data: buf[size_of::<KeyExchangeHeader>()..].to_vec(),
         })
     }

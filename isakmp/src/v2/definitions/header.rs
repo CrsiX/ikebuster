@@ -221,10 +221,38 @@ pub struct NotifyHeader {
     pub notify_message_type: U16,
 }
 
-impl NotifyHeader {
-    pub fn is_error(&self) -> bool {
-        self.notify_message_type.get() < 16384
-    }
+/// Protocol header for delete payloads
+///
+///                          1                   2                   3
+///      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     | Protocol ID   |   SPI Size    |          Num of SPIs          |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///     |                                                               |
+///     ~               Security Parameter Index(es) (SPI)              ~
+///     |                                                               |
+///     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+///
+/// The Delete payload contains a protocol-specific Security Association identifier
+/// that the sender has removed from its Security Association database and is, therefore,
+/// no longer valid. It is possible to send multiple SPIs in a Delete payload; however,
+/// each SPI MUST be for the same protocol. Mixing of protocol identifiers
+/// MUST NOT be performed in the Delete payload. It is permitted,
+/// however, to include multiple Delete payloads in a single
+/// INFORMATIONAL exchange where each Delete payload lists SPIs for a
+/// different protocol.
+///
+/// Deletion of the IKE SA is indicated by a protocol ID of 1 (IKE) but no SPIs.
+#[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
+#[repr(C, packed)]
+pub struct DeleteHeader {
+    /// Must be 1 for an IKE SA, 2 for AH, or 3 for ESP.
+    pub protocol_id: u8,
+    /// Length in octets of the SPI as defined by the protocol ID. It MUST be
+    /// zero for IKE (SPI is in message header) or four for AH and ESP.
+    pub spi_size: u8,
+    /// The number of SPIs contained in the Delete payload.
+    /// The size of each SPI is defined by the SPI Size field.
+    pub number_of_spi: U16,
+    // following: a list of variable-length SPI to delete
 }
-
-// TODO: Delete Header

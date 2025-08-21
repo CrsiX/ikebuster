@@ -3,6 +3,7 @@
 //! Use the [IKEv2::try_parse] associated function as an entrypoint.
 
 mod certificate_request;
+mod deletion;
 mod key_exchange;
 mod notification;
 mod packet;

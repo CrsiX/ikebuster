@@ -1,7 +1,7 @@
 use crate::v1::definitions::{GenericPayloadHeader, Header};
 use crate::v2::definitions::constants::{FLAG_INITIATOR, FLAG_RESPONSE};
 use crate::v2::definitions::params::{ExchangeType, PayloadType};
-use crate::v2::definitions::{CertificateRequest, IKEv2, KeyExchange, Payload};
+use crate::v2::definitions::{CertificateRequest, Deletion, IKEv2, KeyExchange, Payload};
 use crate::v2::definitions::{Notification, SecurityAssociation};
 use crate::v2::parser::{ParserError, ParserResult};
 use crate::v2::IKE_2_VERSION_VALUE;
@@ -65,7 +65,12 @@ impl IKEv2 {
                     next_payload = n;
                     (Some(Payload::Notify(notification)), l)
                 }
-                //PayloadType::Delete => {}
+                PayloadType::Delete => {
+                    let (v, l, n) = try_parse_generic(&buf[offset..])?;
+                    let delete = Deletion::try_parse(v.as_slice())?;
+                    next_payload = n;
+                    (Some(Payload::Delete(delete)), l)
+                }
                 PayloadType::VendorID => {
                     let (v, l, n) = try_parse_generic(&buf[offset..])?;
                     next_payload = n;

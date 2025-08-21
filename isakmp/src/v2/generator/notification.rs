@@ -6,7 +6,7 @@ use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
 
 impl Notification {
-    pub fn try_build(&self, next_payload: PayloadType) -> Result<Vec<u8>, GeneratorError> {
+    pub(crate) fn try_build(&self, next_payload: PayloadType) -> Result<Vec<u8>, GeneratorError> {
         let notification_type = match self.variant {
             NotificationType::Error(e) => e as u16,
             NotificationType::Status(s) => s as u16,
@@ -20,7 +20,12 @@ impl Notification {
         let generic_header = GenericPayloadHeader {
             next_payload: next_payload as u8,
             reserved: 0,
-            payload_length: U16::from(8 + spi_len as u16 + self.data.len() as u16),
+            payload_length: U16::from(
+                size_of::<GenericPayloadHeader>() as u16
+                    + size_of::<NotifyHeader>() as u16
+                    + spi_len as u16
+                    + self.data.len() as u16,
+            ),
         };
         let notify_header = NotifyHeader {
             protocol_id: if self.spi.is_none() {
@@ -32,7 +37,12 @@ impl Notification {
             notify_message_type: U16::from(notification_type),
         };
 
-        let mut packet = Vec::with_capacity(8 + spi_len as usize + self.data.len());
+        let mut packet = Vec::with_capacity(
+            size_of::<GenericPayloadHeader>()
+                + size_of::<NotifyHeader>()
+                + spi_len as usize
+                + self.data.len(),
+        );
         packet.extend_from_slice(generic_header.as_bytes());
         packet.extend_from_slice(notify_header.as_bytes());
         if let Some(data) = self.spi.clone() {

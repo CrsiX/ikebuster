@@ -201,6 +201,10 @@ pub enum NotificationType {
     Status(NotifyStatusMessage),
 }
 
-// TODO
+/// High-level representation of a Deletion (Delete payload)
 #[derive(Debug, PartialEq)]
-pub struct Deletion {}
+pub enum Deletion {
+    InternetKeyExchange,
+    AuthenticationHeader(Vec<u32>),
+    EncapsulatingSecurityPayload(Vec<u32>),
+}
