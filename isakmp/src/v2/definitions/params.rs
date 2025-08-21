@@ -297,6 +297,8 @@ impl TryFrom<u16> for AttributeType {
 #[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
+// On the following CCM and GCM ciphers, the number that follows the cipher indicates
+// the size of the ICV and not the key size, which is negotiated separately
 pub enum EncryptionAlgorithm {
     DES_IV64 = 1, // deprecated
     DES = 2,      // deprecated
@@ -310,12 +312,12 @@ pub enum EncryptionAlgorithm {
     NULL = 11,       // not allowed in IKE
     AES_CBC = 12,
     AES_CTR = 13,
-    AES_CCM_8 = 14,
-    AES_CCM_12 = 15,
-    AES_CCM_16 = 16,
-    AES_GCM_8 = 18,
-    AES_GCM_12 = 19,
-    AES_GCM_16 = 20,
+    AES_CCM_8 = 14,          // AEAD, see RFC 5282
+    AES_CCM_12 = 15,         // AEAD, see RFC 5282; not recommended
+    AES_CCM_16 = 16,         // AEAD, see RFC 5282
+    AES_GCM_8 = 18,          // AEAD, see RFC 5282
+    AES_GCM_12 = 19,         // AEAD, see RFC 5282; not recommended
+    AES_GCM_16 = 20,         // AEAD, see RFC 5282
     NULL_AUTH_AES_GMAC = 21, // not allowed in IKE
     CAMELLIA_CBC = 23,
     CAMELLIA_CTR = 24,

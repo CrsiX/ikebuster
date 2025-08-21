@@ -23,6 +23,15 @@ impl Proposal {
                 {
                     return Err(GeneratorError::MissingMandatoryTransform);
                 }
+                if self.integrity_algorithms.is_empty()
+                    && self
+                        .encryption_algorithms
+                        .iter()
+                        .all(|(e, _)| !e.is_aead_cipher())
+                {
+                    // If not a single AEAD cipher is negotiated, then integrity algorithm is mandatory, otherwise it is optional
+                    return Err(GeneratorError::MissingMandatoryTransform);
+                }
             }
             SecurityProtocol::AuthenticationHeader => {
                 if self.encryption_algorithms.is_empty() || self.sequence_numbers.is_empty() {

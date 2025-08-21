@@ -110,43 +110,43 @@ impl EncryptionAlgorithm {
         }
     }
 
-    /// Determine if an encryption algorithm requires an explicit integrity algorithm
-    /// in its proposal as well. This is true for normal encryption algorithms but
-    /// false for AEAD (authenticated encryption with associated data), like AES-GCM.
-    pub fn requires_integrity_algorithm(&self) -> bool {
+    /// Determine if an encryption algorithm is an AEAD (authenticated encryption with
+    /// associated data) cipher, like AES-GCM. If this is not the case, then a proposal
+    /// for IKE requires an explicit integrity algorithm as well.
+    pub fn is_aead_cipher(&self) -> bool {
         match self {
-            EncryptionAlgorithm::DES_IV64 => true,
-            EncryptionAlgorithm::DES => true,
-            EncryptionAlgorithm::TRIPLE_DES => true,
-            EncryptionAlgorithm::RC5 => true,
-            EncryptionAlgorithm::IDEA => true,
-            EncryptionAlgorithm::CAST => true,
-            EncryptionAlgorithm::BLOWFISH => true,
-            EncryptionAlgorithm::TRIPLE_IDEA => true,
-            EncryptionAlgorithm::DES_IV32 => true,
-            EncryptionAlgorithm::NULL => true, // not allowed in IKE
-            EncryptionAlgorithm::AES_CBC => true,
-            EncryptionAlgorithm::AES_CTR => true,
-            EncryptionAlgorithm::AES_CCM_8 => false,
-            EncryptionAlgorithm::AES_CCM_12 => false,
-            EncryptionAlgorithm::AES_CCM_16 => false,
-            EncryptionAlgorithm::AES_GCM_8 => false,
-            EncryptionAlgorithm::AES_GCM_12 => false,
-            EncryptionAlgorithm::AES_GCM_16 => false,
-            EncryptionAlgorithm::NULL_AUTH_AES_GMAC => true, // not allowed in IKE
-            EncryptionAlgorithm::CAMELLIA_CBC => true,
-            EncryptionAlgorithm::CAMELLIA_CTR => true,
-            EncryptionAlgorithm::CAMELLIA_CCM_8 => false,
-            EncryptionAlgorithm::CAMELLIA_CCM_12 => false,
-            EncryptionAlgorithm::CAMELLIA_CCM_16 => false,
-            EncryptionAlgorithm::CHACHA20_POLY1305 => false,
-            EncryptionAlgorithm::AES_CCM_8_IIV => true, // not allowed in IKE
-            EncryptionAlgorithm::AES_GCM_16_IIV => true, // not allowed in IKE
-            EncryptionAlgorithm::CHACHA20_POLY1305_IIV => true, // not allowed in IKE
-            EncryptionAlgorithm::KUZNYECHIK_MGM_KTREE => false,
-            EncryptionAlgorithm::MAGMA_MGM_KTREE => false,
-            EncryptionAlgorithm::KUZNYECHIK_MGM_MAC_KTREE => true, // not allowed in IKE
-            EncryptionAlgorithm::MAGMA_MGM_MAC_KTREE => true,      // not allowed in IKE
+            EncryptionAlgorithm::DES_IV64 => false,
+            EncryptionAlgorithm::DES => false,
+            EncryptionAlgorithm::TRIPLE_DES => false,
+            EncryptionAlgorithm::RC5 => false,
+            EncryptionAlgorithm::IDEA => false,
+            EncryptionAlgorithm::CAST => false,
+            EncryptionAlgorithm::BLOWFISH => false,
+            EncryptionAlgorithm::TRIPLE_IDEA => false,
+            EncryptionAlgorithm::DES_IV32 => false,
+            EncryptionAlgorithm::NULL => false, // not allowed in IKE
+            EncryptionAlgorithm::AES_CBC => false,
+            EncryptionAlgorithm::AES_CTR => false,
+            EncryptionAlgorithm::AES_CCM_8 => true,
+            EncryptionAlgorithm::AES_CCM_12 => true,
+            EncryptionAlgorithm::AES_CCM_16 => true,
+            EncryptionAlgorithm::AES_GCM_8 => true,
+            EncryptionAlgorithm::AES_GCM_12 => true,
+            EncryptionAlgorithm::AES_GCM_16 => true,
+            EncryptionAlgorithm::NULL_AUTH_AES_GMAC => false, // not allowed in IKE
+            EncryptionAlgorithm::CAMELLIA_CBC => false,
+            EncryptionAlgorithm::CAMELLIA_CTR => false,
+            EncryptionAlgorithm::CAMELLIA_CCM_8 => true,
+            EncryptionAlgorithm::CAMELLIA_CCM_12 => true,
+            EncryptionAlgorithm::CAMELLIA_CCM_16 => true,
+            EncryptionAlgorithm::CHACHA20_POLY1305 => true,
+            EncryptionAlgorithm::AES_CCM_8_IIV => false, // not allowed in IKE
+            EncryptionAlgorithm::AES_GCM_16_IIV => false, // not allowed in IKE
+            EncryptionAlgorithm::CHACHA20_POLY1305_IIV => false, // not allowed in IKE
+            EncryptionAlgorithm::KUZNYECHIK_MGM_KTREE => true,
+            EncryptionAlgorithm::MAGMA_MGM_KTREE => true,
+            EncryptionAlgorithm::KUZNYECHIK_MGM_MAC_KTREE => false, // not allowed in IKE
+            EncryptionAlgorithm::MAGMA_MGM_MAC_KTREE => false,      // not allowed in IKE
         }
     }
 }
