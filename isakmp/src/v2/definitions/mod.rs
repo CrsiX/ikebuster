@@ -31,6 +31,9 @@ pub enum UnparseableParameter {
     /// The parameter can not reach the value this resolves to,
     /// as such the packet where it originates from must be invalid
     OutOfRange,
+    /// The parameter is not allowed in the current context, because an encryption
+    /// algorithm that is only valid in the context of ESP but used in IKE
+    NotAllowed(EncryptionAlgorithm),
 }
 
 /// High-level representation of an IKEv2 message (ISAKMP packet)

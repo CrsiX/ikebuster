@@ -292,15 +292,8 @@ impl TryFrom<u16> for AttributeType {
 /// Values 0, 10 and 22 are reserved, 17 and 36-1023 are unassigned
 /// and 1024-65535 are reserved for private use. See also [UnparseableParameter].
 /// The values 11, 21, 29, 30, 31, 34 and 35 are assigned by IANA but not allowed
-/// for use in IKE and will therefore respond to [UnparseableParameter::OutOfRange].
-// Omitted encryption algorithms defined by IANA but not allowed in IKE usage:
-// NULL = 11,                     // not allowed in IKE
-// NULL_AUTH_AES_GMAC = 21,       // not allowed in IKE
-// AES_CCM_8_IIV = 29,            // not allowed in IKE
-// AES_GCM_16_IIV = 30,           // not allowed in IKE
-// CHACHA20_POLY1305_IIV = 31,    // not allowed in IKE
-// KUZNYECHIK_MGM_MAC_KTREE = 34, // not allowed in IKE
-// MAGMA_MGM_MAC_KTREE = 35,      // not allowed in IKE
+/// for use in IKE and will therefore respond to [UnparseableParameter::NotAllowed]
+/// when parsed from u16; they are allowed for building the packets though.
 #[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
@@ -314,6 +307,7 @@ pub enum EncryptionAlgorithm {
     BLOWFISH = 7,    // deprecated
     TRIPLE_IDEA = 8, // deprecated
     DES_IV32 = 9,    // deprecated
+    NULL = 11,       // not allowed in IKE
     AES_CBC = 12,
     AES_CTR = 13,
     AES_CCM_8 = 14,
@@ -322,14 +316,20 @@ pub enum EncryptionAlgorithm {
     AES_GCM_8 = 18,
     AES_GCM_12 = 19,
     AES_GCM_16 = 20,
+    NULL_AUTH_AES_GMAC = 21, // not allowed in IKE
     CAMELLIA_CBC = 23,
     CAMELLIA_CTR = 24,
     CAMELLIA_CCM_8 = 25,
     CAMELLIA_CCM_12 = 26,
     CAMELLIA_CCM_16 = 27,
     CHACHA20_POLY1305 = 28,
-    KUZNYECHIK_MGM_KTREE = 32, // AEAD, see RFC 9227
-    MAGMA_MGM_KTREE = 33,      // AEAD, see RFC 9227
+    AES_CCM_8_IIV = 29,            // not allowed in IKE
+    AES_GCM_16_IIV = 30,           // not allowed in IKE
+    CHACHA20_POLY1305_IIV = 31,    // not allowed in IKE
+    KUZNYECHIK_MGM_KTREE = 32,     // AEAD, see RFC 9227
+    MAGMA_MGM_KTREE = 33,          // AEAD, see RFC 9227
+    KUZNYECHIK_MGM_MAC_KTREE = 34, // not allowed in IKE
+    MAGMA_MGM_MAC_KTREE = 35,      // not allowed in IKE
 }
 
 impl TryFrom<u16> for EncryptionAlgorithm {
@@ -348,7 +348,7 @@ impl TryFrom<u16> for EncryptionAlgorithm {
             8 => Ok(EncryptionAlgorithm::TRIPLE_IDEA),
             9 => Ok(EncryptionAlgorithm::DES_IV32),
             10 => Err(UnparseableParameter::Reserved),
-            11 => Err(UnparseableParameter::OutOfRange),
+            11 => Err(UnparseableParameter::NotAllowed(Self::NULL)),
             12 => Ok(EncryptionAlgorithm::AES_CBC),
             13 => Ok(EncryptionAlgorithm::AES_CTR),
             14 => Ok(EncryptionAlgorithm::AES_CCM_8),
@@ -358,7 +358,7 @@ impl TryFrom<u16> for EncryptionAlgorithm {
             18 => Ok(EncryptionAlgorithm::AES_GCM_8),
             19 => Ok(EncryptionAlgorithm::AES_GCM_12),
             20 => Ok(EncryptionAlgorithm::AES_GCM_16),
-            21 => Err(UnparseableParameter::OutOfRange),
+            21 => Err(UnparseableParameter::NotAllowed(Self::NULL_AUTH_AES_GMAC)),
             22 => Err(UnparseableParameter::Reserved),
             23 => Ok(EncryptionAlgorithm::CAMELLIA_CBC),
             24 => Ok(EncryptionAlgorithm::CAMELLIA_CTR),
@@ -366,10 +366,17 @@ impl TryFrom<u16> for EncryptionAlgorithm {
             26 => Ok(EncryptionAlgorithm::CAMELLIA_CCM_12),
             27 => Ok(EncryptionAlgorithm::CAMELLIA_CCM_16),
             28 => Ok(EncryptionAlgorithm::CHACHA20_POLY1305),
-            29..=31 => Err(UnparseableParameter::OutOfRange),
+            29 => Err(UnparseableParameter::NotAllowed(Self::AES_CCM_8_IIV)),
+            30 => Err(UnparseableParameter::NotAllowed(Self::AES_GCM_16_IIV)),
+            31 => Err(UnparseableParameter::NotAllowed(
+                Self::CHACHA20_POLY1305_IIV,
+            )),
             32 => Ok(EncryptionAlgorithm::KUZNYECHIK_MGM_KTREE),
             33 => Ok(EncryptionAlgorithm::MAGMA_MGM_KTREE),
-            34..=35 => Err(UnparseableParameter::OutOfRange),
+            34 => Err(UnparseableParameter::NotAllowed(
+                Self::KUZNYECHIK_MGM_MAC_KTREE,
+            )),
+            35 => Err(UnparseableParameter::NotAllowed(Self::MAGMA_MGM_MAC_KTREE)),
             36..=1023 => Err(UnparseableParameter::Unassigned),
             1024..=65535 => Err(UnparseableParameter::PrivateUse),
         }
