@@ -84,7 +84,6 @@ impl EncryptionAlgorithm {
             EncryptionAlgorithm::BLOWFISH => vec![48, 128, 256], // RFC 7296: it allows for variable-length keys
             EncryptionAlgorithm::TRIPLE_IDEA => vec![],          // RFC 7296
             EncryptionAlgorithm::DES_IV32 => vec![],             // RFC 7296
-            EncryptionAlgorithm::NULL => vec![],                 // obviously bad
             EncryptionAlgorithm::AES_CBC => vec![128, 196, 256], // RFC 3602
             EncryptionAlgorithm::AES_CTR => vec![128, 196, 256], // RFC 3686
             EncryptionAlgorithm::AES_CCM_8 => vec![128, 196, 256], // RFC 4106
@@ -93,20 +92,47 @@ impl EncryptionAlgorithm {
             EncryptionAlgorithm::AES_GCM_8 => vec![128, 196, 256], // RFC 4106
             EncryptionAlgorithm::AES_GCM_12 => vec![128, 196, 256], // RFC 4106
             EncryptionAlgorithm::AES_GCM_16 => vec![128, 196, 256], // RFC 4106
-            EncryptionAlgorithm::NULL_AUTH_AES_GMAC => vec![], // unknown but should not be used anyway
             EncryptionAlgorithm::CAMELLIA_CBC => vec![128, 196, 256], // RFC 5529
             EncryptionAlgorithm::CAMELLIA_CTR => vec![128, 196, 256], // RFC 5529
             EncryptionAlgorithm::CAMELLIA_CCM_8 => vec![128, 196, 256], // RFC 5529
             EncryptionAlgorithm::CAMELLIA_CCM_12 => vec![128, 196, 256], // RFC 5529
             EncryptionAlgorithm::CAMELLIA_CCM_16 => vec![128, 196, 256], // RFC 5529
             EncryptionAlgorithm::CHACHA20_POLY1305 => vec![],
-            EncryptionAlgorithm::AES_CCM_8_IIV => vec![128, 196, 256],
-            EncryptionAlgorithm::AES_GCM_16_IIV => vec![128, 196, 256],
-            EncryptionAlgorithm::CHACHA20_POLY1305_IIV => vec![],
             EncryptionAlgorithm::KUZNYECHIK_MGM_KTREE => vec![], // fixed key length: 256 bits
             EncryptionAlgorithm::MAGMA_MGM_KTREE => vec![],      // fixed key length: 256 bits
-            EncryptionAlgorithm::KUZNYECHIK_MGM_MAC_KTREE => vec![], // fixed key length: 256 bits
-            EncryptionAlgorithm::MAGMA_MGM_MAC_KTREE => vec![],  // fixed key length: 256 bits
+        }
+    }
+
+    /// Determine if an encryption algorithm requires an explicit integrity algorithm
+    /// in its proposal as well. This is true for normal encryption algorithms but
+    /// false for AEAD (authenticated encryption with associated data), like AES-GCM.
+    pub fn requires_integrity_algorithm(&self) -> bool {
+        match self {
+            EncryptionAlgorithm::DES_IV64 => true,
+            EncryptionAlgorithm::DES => true,
+            EncryptionAlgorithm::TRIPLE_DES => true,
+            EncryptionAlgorithm::RC5 => true,
+            EncryptionAlgorithm::IDEA => true,
+            EncryptionAlgorithm::CAST => true,
+            EncryptionAlgorithm::BLOWFISH => true,
+            EncryptionAlgorithm::TRIPLE_IDEA => true,
+            EncryptionAlgorithm::DES_IV32 => true,
+            EncryptionAlgorithm::AES_CBC => true,
+            EncryptionAlgorithm::AES_CTR => true,
+            EncryptionAlgorithm::AES_CCM_8 => false,
+            EncryptionAlgorithm::AES_CCM_12 => false,
+            EncryptionAlgorithm::AES_CCM_16 => false,
+            EncryptionAlgorithm::AES_GCM_8 => false,
+            EncryptionAlgorithm::AES_GCM_12 => false,
+            EncryptionAlgorithm::AES_GCM_16 => false,
+            EncryptionAlgorithm::CAMELLIA_CBC => true,
+            EncryptionAlgorithm::CAMELLIA_CTR => true,
+            EncryptionAlgorithm::CAMELLIA_CCM_8 => false,
+            EncryptionAlgorithm::CAMELLIA_CCM_12 => false,
+            EncryptionAlgorithm::CAMELLIA_CCM_16 => false,
+            EncryptionAlgorithm::CHACHA20_POLY1305 => false,
+            EncryptionAlgorithm::KUZNYECHIK_MGM_KTREE => false,
+            EncryptionAlgorithm::MAGMA_MGM_KTREE => false,
         }
     }
 }
