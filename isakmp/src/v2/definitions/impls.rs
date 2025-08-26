@@ -1,8 +1,7 @@
 use crate::v2::definitions::constants::MINIMAL_NOTIFY_STATUS_MESSAGE_VALUE;
 use crate::v2::definitions::header::NotifyHeader;
 use crate::v2::definitions::params::{
-    EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod, PseudorandomFunction,
-    SecurityProtocol,
+    EncryptionAlgorithm, ExchangeType, KeyExchangeMethod, SecurityProtocol,
 };
 use crate::v2::definitions::{IKEv2, Payload, Proposal, Transform};
 
@@ -11,7 +10,7 @@ impl IKEv2 {
     /// can be sent to an IKEv2 receiver (server)
     pub fn hello(payloads: Vec<Payload>) -> Self {
         Self {
-            initiator_cookie: rand::random(),
+            initiator_cookie: rand::random_range(1..u64::MAX),
             responder_cookie: 0,
             exchange_type: ExchangeType::IkeSaInit,
             initiator: true,
@@ -69,21 +68,6 @@ impl Proposal {
         let mut new = Self::new_empty(protocol, None);
         new.add(transforms);
         new
-    }
-
-    /// Construct a new IKE [Proposal] that should be accepted by as many IKEv2 responders
-    /// as possible by only using the ciphers that *must* be supported according to RFC 8247
-    pub fn new_default() -> Self {
-        // See https://www.rfc-editor.org/rfc/rfc8247#section-2 for details about the selection
-        Self::new_full(
-            SecurityProtocol::InternetKeyExchange,
-            vec![
-                Transform::Encryption(EncryptionAlgorithm::AES_CBC, Some(256)),
-                Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_SHA2_256),
-                Transform::Integrity(IntegrityAlgorithm::HMAC_SHA2_256_128),
-                Transform::KeyExchange(KeyExchangeMethod::ModP_2048),
-            ],
-        )
     }
 }
 
