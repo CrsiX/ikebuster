@@ -693,6 +693,16 @@ pub enum NotifyErrorMessage {
     UnsupportedCriticalPayload = 1,
     InvalidIkeSpi = 4,
     InvalidMajorVersion = 5,
+    /// Indicates the IKE message that was received was invalid because
+    /// some type, length, or value was out of range or because the
+    /// request was rejected for policy reasons. To avoid a DoS
+    /// attack using forged messages, this status may only be
+    /// returned for and in an encrypted packet if the Message ID and
+    /// cryptographic checksum were valid. To avoid leaking information
+    /// to someone probing a node, this status MUST be sent in response
+    /// to any error not covered by one of the other status types.
+    /// To aid debugging, more detailed error information should be
+    /// written to a console or log.
     InvalidSyntax = 7,
     InvalidMessageId = 9,
     InvalidSpi = 11,
@@ -866,7 +876,7 @@ pub enum NotifyStatusMessage {
     AdditionalIp6Address = 16398,
     NoAdditionalAddresses = 16399,
     UpdateSaAddresses = 16400,
-    Cookie2 = 16401,
+    Cookie2 = 16401, // see RFC 4555, section 4.2.5 - not relevant for IKEv2 only
     NoNatsAllowed = 16402,
     AuthLifetime = 16403,
     MultipleAuthSupported = 16404,

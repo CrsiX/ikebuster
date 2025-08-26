@@ -35,6 +35,7 @@ use crate::utils::payload_to_transforms::payload_to_transforms;
 mod recv;
 pub mod utils;
 pub mod v2;
+pub(crate) mod v2_utils;
 
 /// The results of the scan
 #[derive(Debug, Clone)]
@@ -128,7 +129,7 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
                                         let other: Vec<Transform> = all.clone().into_iter().filter(|x| !transforms.contains(x)).collect();
 
                                         // Split the transforms into two new messages
-                                        let  [mut a,mut b] = [vec![], vec![]];
+                                        let [mut a, mut b] = [vec![], vec![]];
                                         for x in other {
                                             if a.len() == b.len() {
                                                 a.push(x);
@@ -231,4 +232,6 @@ pub enum ScanError {
     Receive(io::Error),
     #[error("Could not send: {0}")]
     Send(io::Error),
+    #[error("Could not generate IKEv2 packet: {0}")]
+    GeneratorFailed(isakmp::v2::generator::GeneratorError),
 }
