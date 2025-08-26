@@ -47,10 +47,6 @@ pub const FLAG_MORE_FOLLOWING_PROPOSALS: u8 = 2;
 /// to look somewhat like the header of a payload.
 pub const FLAG_MORE_FOLLOWING_TRANSFORMS: u8 = 3;
 
-/// Constant of the first proposal number in a list of proposals of
-/// a Security Association, if any proposal is sent in the SA.
-pub const CONST_FIRST_PROPOSAL_NUMBER: u8 = 1;
-
 /// Constant of the value for the smallest possible
 /// [NotifyStatusMessage](super::NotifyStatusMessage)
 pub const MINIMAL_NOTIFY_STATUS_MESSAGE_VALUE: u16 = 16384;
