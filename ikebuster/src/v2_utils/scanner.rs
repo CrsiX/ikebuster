@@ -27,6 +27,10 @@ pub struct Scanner {
     /// though the target should not require any persistent state for its DoS cookie handling
     retry: Arc<Mutex<Vec<u64>>>,
     todo: Arc<Mutex<VecDeque<Proposal>>>,
+    /// Tracker when a packet identified by its initiator SPI was sent to the remote
+    /// side. Only packets in `open` are still valid. This is used to track packet timings
+    /// and detect dropped packets.
+    packet_tracking: Arc<Mutex<HashMap<u64, Instant>>>,
     total_checks: usize,
     pub accepted: Arc<Mutex<Vec<Proposal>>>,
     pub rejected: Arc<Mutex<Vec<Proposal>>>,
@@ -41,8 +45,15 @@ pub struct Scanner {
     last_packet_sent: Arc<Mutex<Option<Instant>>>,
 }
 
-const SENDING_DELAY: Duration = Duration::from_millis(1000);
-const WAITING_DELAY: Duration = Duration::from_millis(1000);
+/// Delay between sending packets
+const SENDING_DELAY: Duration = Duration::from_millis(1_000);
+
+/// Delay for waiting on incoming packets if we still await some
+const WAITING_DELAY: Duration = Duration::from_millis(1_000);
+
+/// Timeout until packets without response are considered permanently lost;
+/// it must be strictly higher than [SENDING_DELAY]
+const TIMEOUT_DELAY: Duration = Duration::from_millis(10_000);
 
 impl Scanner {
     pub async fn scan(target: IpAddr) -> Result<Arc<Self>, ScanError> {
@@ -68,6 +79,7 @@ impl Scanner {
             open: Arc::new(Default::default()),
             retry: Arc::new(Default::default()),
             todo: Arc::new(Mutex::new(list_all_proposals())),
+            packet_tracking: Arc::new(Mutex::new(HashMap::new())),
             total_checks: Default::default(),
             accepted: Arc::new(Default::default()),
             rejected: Arc::new(Default::default()),
@@ -91,8 +103,41 @@ impl Scanner {
         });
         arc.do_scan().await?;
 
-        while *arc.recv_packets.lock().unwrap() < *arc.sent_packets.lock().unwrap() {
-            debug!("Waiting to receive all messages ...");
+        /// Returns any open but lost packet identifier as `Some<Some<_>>`,
+        /// or `Some<None>` if there are open packets but not over the
+        /// timeout yet, or `None` if there aren't any
+        fn get_dropped_open_identifier(s: Arc<Scanner>) -> Option<Option<u64>> {
+            let open = s.open.lock().unwrap();
+            if open.is_empty() {
+                None
+            } else {
+                let tracking = s.packet_tracking.lock().unwrap();
+                for k in open.keys() {
+                    if tracking.get(k)?.elapsed() > TIMEOUT_DELAY {
+                        return Some(Some(*k));
+                    };
+                }
+                Some(None)
+            }
+        }
+
+        // Handle dropped packets and other issues at the very end of the scanning process
+        while let Some(open_identifier) = get_dropped_open_identifier(arc.clone()) {
+            match open_identifier {
+                None => {
+                    debug!("Waiting to receive all messages ...");
+                }
+                Some(lost_identifier) => {
+                    debug!("Detected dropped packet, restoring proposal(s) and retrying ...");
+                    arc.packet_tracking.lock().unwrap().remove(&lost_identifier);
+                    if let Some(packet) = arc.open.lock().unwrap().remove(&lost_identifier) {
+                        for p in get_proposals(&packet) {
+                            arc.todo.lock().unwrap().push_back(p.clone());
+                        }
+                    };
+                    arc.do_scan().await?;
+                }
+            }
             tokio::time::sleep(WAITING_DELAY).await;
         }
 
@@ -129,10 +174,13 @@ impl Scanner {
         }
 
         while let Some(sending) = pop_next_sending_item(self) {
-            let serialized_msg = match sending {
+            let (serialized_msg, identifier) = match sending {
                 Sending::Retry(initiator_cookie) => {
                     if let Some(msg) = self.open.lock().unwrap().get(&initiator_cookie) {
-                        msg.try_build().map_err(ScanError::GeneratorFailed)?
+                        (
+                            msg.try_build().map_err(ScanError::GeneratorFailed)?,
+                            initiator_cookie,
+                        )
                     } else {
                         error!("Retrying with cookie {initiator_cookie} impossible, message not found in local storage!");
                         self.errors.lock().unwrap().add_assign(1);
@@ -154,8 +202,9 @@ impl Scanner {
                         Payload::Nonce(get_random_vec(16)),
                     ]);
                     let serialized_msg = msg.try_build().map_err(ScanError::GeneratorFailed)?;
+                    let initiator_cookie = msg.initiator_cookie;
                     self.open.lock().unwrap().insert(msg.initiator_cookie, msg);
-                    serialized_msg
+                    (serialized_msg, initiator_cookie)
                 }
             };
 
@@ -171,6 +220,7 @@ impl Scanner {
                 .unwrap()
                 .add_assign(sent_bytes as u64);
             self.sent_packets.lock().unwrap().add_assign(1);
+            self.packet_tracking.lock().unwrap().insert(identifier, ts);
             tokio::time::sleep(SENDING_DELAY).await;
         }
 
@@ -223,6 +273,10 @@ impl Scanner {
                 match n.variant {
                     NotificationType::Error(e) => match e {
                         NotifyErrorMessage::InvalidSyntax => {
+                            self.packet_tracking
+                                .lock()
+                                .unwrap()
+                                .remove(&packet.initiator_cookie);
                             if let Some(open_packet) =
                                 self.open.lock().unwrap().remove(&packet.initiator_cookie)
                             {
@@ -246,6 +300,10 @@ impl Scanner {
                             }
                         }
                         NotifyErrorMessage::NoProposalChosen => {
+                            self.packet_tracking
+                                .lock()
+                                .unwrap()
+                                .remove(&packet.initiator_cookie);
                             if let Some(open_packet) =
                                 self.open.lock().unwrap().remove(&packet.initiator_cookie)
                             {
@@ -321,6 +379,10 @@ impl Scanner {
             match payload {
                 Payload::SecurityAssociation(sa) => {
                     if let Some(received_proposal) = sa.proposals.first() {
+                        self.packet_tracking
+                            .lock()
+                            .unwrap()
+                            .remove(&packet.initiator_cookie);
                         if let Some(open_packet) =
                             self.open.lock().unwrap().remove(&packet.initiator_cookie)
                         {
