@@ -3,7 +3,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::ops::AddAssign;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use isakmp::v2::definitions;
 use isakmp::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage, SecurityProtocol};
@@ -11,6 +11,7 @@ use isakmp::v2::definitions::{
     IKEv2, Notification, NotificationType, Payload, Proposal, SecurityAssociation,
 };
 use isakmp::v2::utils::get_random_vec;
+use serde::Serialize;
 use tokio::net::UdpSocket;
 use tracing::{debug, error, info, warn};
 
@@ -20,6 +21,7 @@ use crate::ScanError;
 
 #[derive(Clone)]
 pub struct Scanner {
+    target: IpAddr,
     socket: Arc<UdpSocket>,
     open: Arc<Mutex<HashMap<u64, IKEv2>>>,
     /// List of initiator cookies found in `open` that should be retried as soon as possible
@@ -43,6 +45,31 @@ pub struct Scanner {
     pub recv_packets: Arc<Mutex<u64>>,
     scan_started: Instant,
     last_packet_sent: Arc<Mutex<Option<Instant>>>,
+    save_state: Option<fn(String, IpAddr) -> Result<(), ScanError>>,
+}
+
+#[derive(Debug, Serialize)]
+struct ScannerSerialization {
+    target: IpAddr,
+    open: HashMap<u64, Vec<Proposal>>,
+    retry_len: usize,
+    todo: VecDeque<Proposal>,
+    total_checks: usize,
+    accepted: Vec<Proposal>,
+    rejected: Vec<Proposal>,
+    invalid_syntax: Vec<Proposal>,
+    vendor_ids: Vec<Vec<u8>>,
+    errors: u64,
+    sent_bytes: u64,
+    sent_packets: u64,
+    recv_bytes: u64,
+    recv_packets: u64,
+    /// UNIX timestamp when the scan was started
+    scan_started: u64,
+    /// Elapsed scan time in milliseconds
+    elapsed_ms: u64,
+    /// UNIX timestamp when this file was created
+    save_created: u64,
 }
 
 /// Delay between sending packets
@@ -56,7 +83,10 @@ const WAITING_DELAY: Duration = Duration::from_millis(1_000);
 const TIMEOUT_DELAY: Duration = Duration::from_millis(10_000);
 
 impl Scanner {
-    pub async fn scan(target: IpAddr) -> Result<Arc<Self>, ScanError> {
+    pub async fn scan(
+        target: IpAddr,
+        save_state: Option<fn(String, IpAddr) -> Result<(), ScanError>>,
+    ) -> Result<Arc<Self>, ScanError> {
         let addr = SocketAddr::new(target, 500);
         info!("Binding and starting to scan {addr}");
 
@@ -75,6 +105,7 @@ impl Scanner {
         socket.connect(&addr).await.map_err(ScanError::Receive)?;
 
         let mut scanner = Scanner {
+            target,
             socket,
             open: Arc::new(Default::default()),
             retry: Arc::new(Default::default()),
@@ -92,6 +123,7 @@ impl Scanner {
             recv_packets: Arc::new(Default::default()),
             scan_started: Instant::now(),
             last_packet_sent: Arc::new(Mutex::new(None)),
+            save_state,
         };
         scanner.total_checks = scanner.todo.lock().unwrap().len();
 
@@ -242,7 +274,7 @@ impl Scanner {
 
             self.recv_bytes.lock().unwrap().add_assign(len as u64);
             self.recv_packets.lock().unwrap().add_assign(1);
-            self.update_progress();
+            let _ = self.update_progress();
 
             match IKEv2::try_parse(&buf[..len]) {
                 Ok(packet) => {
@@ -406,7 +438,7 @@ impl Scanner {
         }
     }
 
-    fn update_progress(&self) {
+    fn update_progress(&self) -> Result<(), ScanError> {
         let todo = self.todo.lock().unwrap().len();
         if todo % 1000 == 0 {
             debug!(
@@ -418,7 +450,12 @@ impl Scanner {
                 self.sent_packets.lock().unwrap(),
                 self.recv_packets.lock().unwrap(),
             );
+            if let Some(save_fn) = self.save_state {
+                let serialization = self.serialize();
+                save_fn(serde_json::to_string(&serialization).unwrap(), self.target)?;
+            }
         }
+        Ok(())
     }
 
     /// Construct a vec of [Finding]s from the previous scan
@@ -453,6 +490,77 @@ impl Scanner {
             findings.push(to_finding(i, FindingResult::InvalidSyntax));
         }
         findings
+    }
+
+    fn serialize(&self) -> ScannerSerialization {
+        let now = SystemTime::now();
+        let since_start = self.scan_started.elapsed();
+        let scan_started = (now - since_start)
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        // Acquire all relevant locks to keep the state clean
+        let open_l = self.open.lock().unwrap();
+        let todo_l = self.todo.lock().unwrap();
+        let accepted_l = self.accepted.lock().unwrap();
+        let rejected_l = self.rejected.lock().unwrap();
+        let invalid_l = self.invalid_syntax.lock().unwrap();
+        let vendor_l = self.vendor_ids.lock().unwrap();
+
+        let mut open = HashMap::new();
+        for (k, v) in open_l.iter() {
+            let mut propoosals = vec![];
+            for p in get_proposals(v) {
+                propoosals.push(p.clone());
+            }
+            open.insert(*k, propoosals);
+        }
+
+        let mut todo = VecDeque::new();
+        for i in todo_l.iter() {
+            todo.push_back(i.clone());
+        }
+
+        let mut accepted = Vec::new();
+        for i in accepted_l.iter() {
+            accepted.push(i.clone());
+        }
+
+        let mut rejected = Vec::new();
+        for i in rejected_l.iter() {
+            rejected.push(i.clone());
+        }
+
+        let mut invalid_syntax = Vec::new();
+        for i in invalid_l.iter() {
+            invalid_syntax.push(i.clone());
+        }
+
+        let mut vendor_ids = Vec::new();
+        for i in vendor_l.iter() {
+            vendor_ids.push(i.clone());
+        }
+
+        ScannerSerialization {
+            target: self.target,
+            open,
+            retry_len: self.retry.lock().unwrap().len(),
+            todo,
+            total_checks: self.total_checks,
+            accepted,
+            rejected,
+            invalid_syntax,
+            vendor_ids,
+            errors: self.errors.lock().unwrap().clone(),
+            sent_bytes: self.sent_bytes.lock().unwrap().clone(),
+            sent_packets: self.sent_packets.lock().unwrap().clone(),
+            recv_bytes: self.recv_bytes.lock().unwrap().clone(),
+            recv_packets: self.recv_packets.lock().unwrap().clone(),
+            scan_started,
+            elapsed_ms: since_start.as_millis() as u64,
+            save_created: now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+        }
     }
 }
 
