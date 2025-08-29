@@ -14,6 +14,7 @@ use isakmp::v2::utils::get_random_vec;
 use tokio::net::UdpSocket;
 use tracing::{debug, error, info, warn};
 
+use crate::v2_utils::finding::{Finding, FindingResult};
 use crate::v2_utils::gen_proposals::list_all_proposals;
 use crate::ScanError;
 
@@ -90,7 +91,7 @@ impl Scanner {
         });
         arc.do_scan().await?;
 
-        while *arc.recv_bytes.lock().unwrap() < *arc.sent_bytes.lock().unwrap() {
+        while *arc.recv_packets.lock().unwrap() < *arc.sent_packets.lock().unwrap() {
             debug!("Waiting to receive all messages ...");
             tokio::time::sleep(WAITING_DELAY).await;
         }
@@ -191,7 +192,7 @@ impl Scanner {
 
             self.recv_bytes.lock().unwrap().add_assign(len as u64);
             self.recv_packets.lock().unwrap().add_assign(1);
-            self.update_progress().await;
+            self.update_progress();
 
             match IKEv2::try_parse(&buf[..len]) {
                 Ok(packet) => {
@@ -343,7 +344,7 @@ impl Scanner {
         }
     }
 
-    async fn update_progress(&self) {
+    fn update_progress(&self) {
         let todo = self.todo.lock().unwrap().len();
         if todo % 1000 == 0 {
             debug!(
@@ -356,6 +357,40 @@ impl Scanner {
                 self.recv_packets.lock().unwrap(),
             );
         }
+    }
+
+    /// Construct a vec of [Finding]s from the previous scan
+    pub fn get_findings(&self) -> Vec<Finding> {
+        let mut findings = Vec::new();
+
+        #[inline]
+        fn to_finding(proposal: &Proposal, result: FindingResult) -> Finding {
+            Finding {
+                encryption: proposal.encryption_algorithms.get(0).unwrap().0,
+                key_size: proposal.encryption_algorithms.get(0).unwrap().1,
+                is_aead: proposal
+                    .encryption_algorithms
+                    .get(0)
+                    .unwrap()
+                    .0
+                    .is_aead_cipher(),
+                prf: proposal.pseudo_random_functions.get(0).unwrap().clone(),
+                integrity: proposal.integrity_algorithms.first().cloned(),
+                kex: proposal.key_exchange_methods.first().cloned().unwrap(),
+                result,
+            }
+        }
+
+        for i in self.accepted.lock().unwrap().iter() {
+            findings.push(to_finding(i, FindingResult::Accepted));
+        }
+        for i in self.rejected.lock().unwrap().iter() {
+            findings.push(to_finding(i, FindingResult::Rejected));
+        }
+        for i in self.invalid_syntax.lock().unwrap().iter() {
+            findings.push(to_finding(i, FindingResult::InvalidSyntax));
+        }
+        findings
     }
 }
 
