@@ -180,6 +180,7 @@ impl Scanner {
             arc.recv_bytes.lock().unwrap(),
             arc.recv_packets.lock().unwrap()
         );
+        arc.save_current_state()?;
         Ok(arc)
     }
 
@@ -450,9 +451,16 @@ impl Scanner {
                 self.sent_packets.lock().unwrap(),
                 self.recv_packets.lock().unwrap(),
             );
-            if let Some(save_fn) = self.save_state {
-                let serialization = self.serialize();
-                save_fn(serde_json::to_string(&serialization).unwrap(), self.target)?;
+            self.save_current_state()?
+        }
+        Ok(())
+    }
+
+    fn save_current_state(&self) -> Result<(), ScanError> {
+        if let Some(save_fn) = self.save_state {
+            match serde_json::to_string(&self.serialize()) {
+                Ok(serialization) => save_fn(serialization, self.target)?,
+                Err(err) => error!("Serialization error avoiding saving state: {}", err),
             }
         }
         Ok(())
