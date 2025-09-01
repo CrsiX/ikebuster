@@ -51,14 +51,8 @@ pub struct Scanner {
 #[derive(Debug, Serialize)]
 struct ScannerSerialization {
     target: IpAddr,
-    open: HashMap<u64, Vec<Proposal>>,
     retry_len: usize,
-    todo: VecDeque<Proposal>,
     total_checks: usize,
-    accepted: Vec<Proposal>,
-    rejected: Vec<Proposal>,
-    invalid_syntax: Vec<Proposal>,
-    vendor_ids: Vec<Vec<u8>>,
     errors: u64,
     sent_bytes: u64,
     sent_packets: u64,
@@ -70,6 +64,12 @@ struct ScannerSerialization {
     elapsed_ms: u64,
     /// UNIX timestamp when this file was created
     save_created: u64,
+    open: HashMap<u64, Vec<Proposal>>,
+    accepted: Vec<Proposal>,
+    rejected: Vec<Proposal>,
+    invalid_syntax: Vec<Proposal>,
+    todo: VecDeque<Proposal>,
+    vendor_ids: Vec<Vec<u8>>,
 }
 
 /// Delay between sending packets
@@ -260,30 +260,36 @@ impl Scanner {
         Ok(())
     }
 
-    async fn handle_receiving(&self) {
+    async fn handle_receiving(&self) -> Result<(), ScanError> {
         loop {
             const MAX_DATAGRAM_SIZE: usize = 65_507;
             let mut buf = [0u8; MAX_DATAGRAM_SIZE];
-            let len = match self.socket.recv(&mut buf).await {
-                Ok(len) => len,
-                Err(e) => {
-                    error!("Failed to read bytes from socket: {e}. Exiting!");
-                    return;
+            let timed_receiving = tokio::time::timeout(RECEIVE_TIMEOUT, self.socket.recv(&mut buf));
+            let len = match timed_receiving.await {
+                Ok(v) => match v {
+                    Ok(len) => Ok(len),
+                    Err(e) => {
+                        error!("Failed to read bytes from socket: {e}");
+                        Err(ScanError::Receive(e))
+                    }
+                },
+                Err(_) => {
+                    error!("Timeout while waiting for incoming data for {RECEIVE_TIMEOUT:#?}");
+                    Err(ScanError::Timeout(RECEIVE_TIMEOUT))
                 }
-            };
-            // TODO: handle unresponsive peers (e.g. when they do not send any packets & timeouts)
+            }?;
 
             self.recv_bytes.lock().unwrap().add_assign(len as u64);
-            self.recv_packets.lock().unwrap().add_assign(1);
-            let _ = self.update_progress();
 
             match IKEv2::try_parse(&buf[..len]) {
                 Ok(packet) => {
                     self.handle_packet(packet).await;
+                    self.recv_packets.lock().unwrap().add_assign(1);
+                    let _ = self.update_progress();
                 }
                 Err(err) => {
                     error!("Failed to parse IKEv2 packet: {}", err);
-                    debug!("Invalid IKEv2 packet: {:02x?}", buf);
+                    debug!("Invalid IKEv2 packet: {:02x?}", &buf[..len]);
                     self.errors.lock().unwrap().add_assign(1);
                 }
             }
@@ -360,9 +366,12 @@ impl Scanner {
                     },
                     NotificationType::Status(s) => match s {
                         NotifyStatusMessage::Cookie => {
-                            if n.protocol != SecurityProtocol::InternetKeyExchange {
-                                error!("Received unexpected cookie for non-IKE protocol: {:#?}", n);
-                            } else {
+                            if n.protocol == SecurityProtocol::InternetKeyExchange
+                                || n.protocol == SecurityProtocol::Reserved
+                            {
+                                if n.protocol == SecurityProtocol::Reserved {
+                                    debug!("Received cookie for {}, but using anyway", n.protocol);
+                                }
                                 if n.data.len() > 64 {
                                     warn!("Received cookie with more than 64 bytes payload, violating the protocol! Proceeding anyway...");
                                 } else if n.data.is_empty() {
@@ -373,6 +382,8 @@ impl Scanner {
                                     self.errors.lock().unwrap().add_assign(1);
                                 }
                                 dos_cookie = Some(n.data.clone());
+                            } else {
+                                error!("Received unexpected cookie for non-IKE protocol: {:#?}", n);
                             }
                         }
                         // Simply ignore various status messages we are not interested in
@@ -552,14 +563,8 @@ impl Scanner {
 
         ScannerSerialization {
             target: self.target,
-            open,
             retry_len: self.retry.lock().unwrap().len(),
-            todo,
             total_checks: self.total_checks,
-            accepted,
-            rejected,
-            invalid_syntax,
-            vendor_ids,
             errors: self.errors.lock().unwrap().clone(),
             sent_bytes: self.sent_bytes.lock().unwrap().clone(),
             sent_packets: self.sent_packets.lock().unwrap().clone(),
@@ -568,6 +573,12 @@ impl Scanner {
             scan_started,
             elapsed_ms: since_start.as_millis() as u64,
             save_created: now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            open,
+            accepted,
+            rejected,
+            invalid_syntax,
+            todo,
+            vendor_ids,
         }
     }
 }

@@ -234,4 +234,6 @@ pub enum ScanError {
     Send(io::Error),
     #[error("Could not generate IKEv2 packet: {0}")]
     GeneratorFailed(isakmp::v2::generator::GeneratorError),
+    #[error("Timeout while sending/receiving data: {0:#?}")]
+    Timeout(Duration),
 }
