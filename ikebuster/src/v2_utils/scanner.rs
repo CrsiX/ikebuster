@@ -444,7 +444,12 @@ impl Scanner {
                 }
                 Payload::KeyExchange(_) => {}        // TODO: verify KE
                 Payload::CertificateRequest(_) => {} // TODO: verify CR
-                Payload::VendorID(_) => {}           // TODO: fingerprinting
+                Payload::VendorID(v) => {
+                    let mut vendor_ids = self.vendor_ids.lock().unwrap();
+                    if !vendor_ids.contains(&v) {
+                        vendor_ids.push(v.clone());
+                    }
+                }
                 _ => {}
             }
         }
@@ -454,11 +459,12 @@ impl Scanner {
         let todo = self.todo.lock().unwrap().len();
         if todo % 1000 == 0 {
             debug!(
-                "Progress: Left todo: {} ({:.2}% done) after {:#?}, {} errors, {} sent, {} received",
+                "Progress: Left todo: {} ({:.2}% done) after {:#?}, {} errors, {} accepted, {} sent, {} received",
                 todo,
                 100f64 * (self.total_checks - todo) as f64 / (self.total_checks) as f64,
                 self.scan_started.elapsed(),
                 self.errors.lock().unwrap(),
+                self.accepted.lock().unwrap().len(),
                 self.sent_packets.lock().unwrap(),
                 self.recv_packets.lock().unwrap(),
             );
