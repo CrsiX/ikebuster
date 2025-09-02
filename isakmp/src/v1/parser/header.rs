@@ -16,7 +16,7 @@ pub fn parse_header(buf: &[u8]) -> Result<Header, IsakmpParseError> {
         initiator_cookie: header.initiator_cookie.get(),
         responder_cookie: header.responder_cookie.get(),
         major_version: header.version >> 4,
-        minor_version: header.version << 4,
+        minor_version: header.version & 0b1111,
         flags: header.flags,
         exchange_mode: ExchangeType::try_from(header.exchange_type)?,
         length: header.length.get(),
