@@ -30,10 +30,22 @@ macro_rules! owo_println {
     };
 }
 
+/// Possible scan modes for ikebuster
+#[derive(Debug, Clone, clap::ValueEnum)]
+pub enum ScanMode {
+    V1,
+    V2,
+    Both,
+    Autodetect,
+}
+
 /// The cli of ikebuster
 #[derive(Debug, Parser)]
 #[clap(author, version)]
 pub struct Cli {
+    /// The mode of the scan, either IKEv1, IKEv2, both, or autodetect
+    pub mode: ScanMode,
+
     /// The IP to scan
     pub ip: IpAddr,
 
@@ -41,21 +53,33 @@ pub struct Cli {
     #[clap(short, default_value_t = 500)]
     pub port: u16,
 
+    /// The local listen port to bind to (values other than 500 may not work with all servers)
+    #[clap(long, default_value_t = 500)]
+    pub listen_port: u16,
+
     /// The interval in milliseconds in which the messages should be sent
     #[clap(short, long, default_value_t = 500)]
     pub interval: u64,
 
-    /// The number of transforms to send in a proposal
+    /// The max number of transforms to send in a proposal
     #[clap(long, default_value_t = 20)]
     pub transforms: usize,
 
-    /// Output the results in a json file
+    /// Output the results in a JSON file
     #[clap(long)]
     pub json: Option<String>,
 
+    /// Output the results in a CSV file. Only used in IKEv2
+    #[clap(long)]
+    pub csv: Option<String>,
+
+    /// Save the current scanning state periodically to a JSON file. Only used in IKEv2
+    #[clap(long)]
+    pub json_state: Option<String>,
+
     /// The sleep time (in seconds) after a valid transform is found.
     ///
-    /// Some servers limit new requests when there are half-open connections
+    /// Some servers limit new requests when there are half-open connections. Only used in IKEv1
     #[clap(long, default_value_t = 45)]
     pub sleep_on_transform_found: u64,
 
@@ -73,6 +97,11 @@ pub struct DataOutput {
     pub valid_transforms: Vec<Transform>,
 }
 
+/// Main function for the IKEv2 mode which is called via the actual main function as a wrapper
+async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
@@ -88,6 +117,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
 
     println!("{}", BANNER.blue().bold());
+
+    match cli.mode {
+        ScanMode::V1 => {}
+        ScanMode::V2 => {
+            return main_v2(&cli).await;
+        }
+        ScanMode::Both => {
+            // TODO: Implement both modes sequentially
+            println!("Unsupported scan mode.");
+            exit(2);
+        }
+        ScanMode::Autodetect => {
+            // TODO: Implement autodetection mode
+            println!("Unsupported scan mode.");
+            exit(2);
+        }
+    }
 
     let opts = ScanOptions {
         ip: cli.ip,
