@@ -49,27 +49,23 @@ pub struct Scanner {
 }
 
 #[derive(Debug, Serialize)]
-struct ScannerSerialization {
-    target: IpAddr,
-    retry_len: usize,
-    total_checks: usize,
-    errors: u64,
-    sent_bytes: u64,
-    sent_packets: u64,
-    recv_bytes: u64,
-    recv_packets: u64,
+pub struct ScannerSerialization {
+    pub target: IpAddr,
+    pub target_port: u16,
+    pub retry_len: usize,
+    pub statistics: Statistics,
     /// UNIX timestamp when the scan was started
-    scan_started: u64,
+    pub scan_started: u64,
     /// Elapsed scan time in milliseconds
-    elapsed_ms: u64,
+    pub elapsed_ms: u64,
     /// UNIX timestamp when this file was created
-    save_created: u64,
-    open: HashMap<u64, Vec<Proposal>>,
-    accepted: Vec<Proposal>,
-    rejected: Vec<Proposal>,
-    invalid_syntax: Vec<Proposal>,
-    todo: VecDeque<Proposal>,
-    vendor_ids: Vec<Vec<u8>>,
+    pub save_created: u64,
+    pub open: HashMap<u64, Vec<Proposal>>,
+    pub accepted: Vec<Proposal>,
+    pub rejected: Vec<Proposal>,
+    pub invalid_syntax: Vec<Proposal>,
+    pub todo: VecDeque<Proposal>,
+    pub vendor_ids: Vec<Vec<u8>>,
 }
 
 /// Delay between sending packets
@@ -91,10 +87,10 @@ impl Scanner {
         info!("Binding and starting to scan {addr}");
 
         let socket = Arc::new(match addr.ip() {
-            IpAddr::V4(_) => UdpSocket::bind("0.0.0.0:4500")
+            IpAddr::V4(_) => UdpSocket::bind(("0.0.0.0", 500))
                 .await
                 .map_err(ScanError::CouldNotBind)?,
-            IpAddr::V6(_) => UdpSocket::bind("[::]:4500")
+            IpAddr::V6(_) => UdpSocket::bind(("[::]", 500))
                 .await
                 .map_err(ScanError::CouldNotBind)?,
         });
@@ -569,13 +565,16 @@ impl Scanner {
 
         ScannerSerialization {
             target: self.target,
+            target_port: 500,
             retry_len: self.retry.lock().unwrap().len(),
-            total_checks: self.total_checks,
-            errors: self.errors.lock().unwrap().clone(),
-            sent_bytes: self.sent_bytes.lock().unwrap().clone(),
-            sent_packets: self.sent_packets.lock().unwrap().clone(),
-            recv_bytes: self.recv_bytes.lock().unwrap().clone(),
-            recv_packets: self.recv_packets.lock().unwrap().clone(),
+            statistics: Statistics {
+                errors: self.errors.lock().unwrap().clone(),
+                sent_bytes: self.sent_bytes.lock().unwrap().clone(),
+                sent_packets: self.sent_packets.lock().unwrap().clone(),
+                recv_bytes: self.recv_bytes.lock().unwrap().clone(),
+                recv_packets: self.recv_packets.lock().unwrap().clone(),
+                total_checks: self.total_checks,
+            },
             scan_started,
             elapsed_ms: since_start.as_millis() as u64,
             save_created: now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),

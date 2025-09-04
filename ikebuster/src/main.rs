@@ -8,11 +8,13 @@ use std::time::Duration;
 
 use clap::ArgAction;
 use clap::Parser;
-use ikebuster::ScanError;
+use ikebuster::v2_utils::{ScanOptionsV2, ScanResultOutputFormat};
 use ikebuster::ScanOptions;
+use ikebuster::{v2_utils, ScanError};
 use isakmp::v1::generator::Transform;
 use owo_colors::OwoColorize;
 use serde::Serialize;
+use tracing::{debug, info};
 
 const BANNER: &str = r#"
 Welcome to
@@ -108,8 +110,53 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         json_state: cli.json_state.clone(),
     };
 
+    let now = std::time::Instant::now();
     let handler = ikebuster::v2_utils::scanner2::start_scan(&options).await?;
-    let (result, statistics) = handler.complete().await??;
+    let (results, statistics) = handler.complete().await??;
+    let elapsed = now.elapsed();
+    info!(
+        "Completed scan in {:#?}. Accepted {} proposals, rejected {} proposals.",
+        elapsed,
+        results.accepted.len(),
+        results.rejected.len()
+    );
+    for v in results.vendor_ids.iter() {
+        debug!("Vendor ID detected: {v:#?}");
+    }
+    debug!(
+        sent_bytes = statistics.sent_bytes,
+        sent_packets = statistics.sent_packets,
+        recv_bytes = statistics.recv_bytes,
+        recv_packets = statistics.recv_packets,
+        errors = statistics.errors,
+        "Stats: Sent {} bytes / {} packets. Received {} bytes / {} packets. {} errors.",
+        statistics.sent_bytes,
+        statistics.sent_packets,
+        statistics.recv_bytes,
+        statistics.recv_packets,
+        statistics.errors
+    );
+
+    let findings = results.to_findings();
+    if let Some(csv_path) = &cli.csv {
+        let mut file = File::create(csv_path)?;
+        let content = v2_utils::finding::format_to_csv(&findings)?;
+        let _ = file.write(content.as_bytes())?;
+    }
+    if let Some(json_path) = &cli.json {
+        let mut file = File::create(json_path)?;
+        let content = serde_json::to_string_pretty(&ScanResultOutputFormat {
+            target: cli.ip,
+            target_port: cli.port,
+            completed: true,
+            statistics,
+            rejected: results.rejected.len(),
+            invalid_syntax: results.invalid_syntax.len(),
+            accepted: results.accepted,
+            vendor_ids: results.vendor_ids,
+        })?;
+        let _ = file.write(content.as_bytes())?;
+    }
     Ok(())
 }
 
