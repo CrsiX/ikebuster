@@ -1,70 +1,49 @@
 //! IKEv2 scan core functionality
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::net::{IpAddr, SocketAddr};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime};
 
-use crate::v2_utils::gen_proposals::list_all_proposals;
-use crate::v2_utils::scanner::ScannerSerialization;
-use crate::v2_utils::ScanOptionsV2;
-use crate::ScanError;
-use isakmp::v2::definitions::{IKEv2, Proposal};
+use isakmp::v2::definitions::Proposal;
 use tokio::net::UdpSocket;
 use tokio::select;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tokio::task::{JoinError, JoinHandle};
-use tokio::time::interval;
-use tracing::{debug, error, info, trace};
+use tokio::time::{interval, MissedTickBehavior};
+use tracing::{debug, error, info, trace, warn};
+
+use crate::v2_utils::gen_proposals::list_all_proposals;
+use crate::v2_utils::receiver::handle_receiving;
+use crate::v2_utils::scanner::ScannerSerialization;
+use crate::v2_utils::sender::handle_sending_hello;
+use crate::v2_utils::{Open, Results, ScanOptionsV2, Statistics};
+use crate::ScanError;
 
 #[derive(Debug)]
 enum ControlChannelEvent {
     Abort,
     DumpState(oneshot::Sender<ScannerSerialization>),
+    Stats(oneshot::Sender<Statistics>),
     Progress(oneshot::Sender<f64>),
     Remaining(oneshot::Sender<usize>),
 }
-
-#[derive(Debug, Default)]
-struct Statistics {
-    pub errors: u64,
-    pub sent_bytes: u64,
-    pub sent_packets: u64,
-    pub recv_bytes: u64,
-    pub recv_packets: u64,
-    pub total_checks: u64,
-}
-
-#[derive(Debug, Default)]
-struct Results {
-    pub accepted: Vec<Proposal>,
-    pub rejected: Vec<Proposal>,
-    pub invalid_syntax: Vec<Proposal>,
-    pub vendor_ids: Vec<Vec<u8>>,
-}
-
-#[derive(Debug, Default)]
-struct Open {
-    sent: Vec<(IKEv2, Instant)>,
-    retry: Vec<IKEv2>,
-}
-
-fn handle_receiving(stats: &mut Statistics, raw_rx: &[u8]) {}
 
 async fn scan(
     mut control_rx: mpsc::Receiver<ControlChannelEvent>,
     socket: Arc<UdpSocket>,
     options: ScanOptionsV2,
-) -> Result<(), ScanError> {
+) -> Result<(Results, Statistics), ScanError> {
     trace!("Starting scan...");
     let scan_started = Instant::now();
     let mut sending_interval = interval(Duration::from_millis(options.interval));
+    sending_interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
     sending_interval.tick().await;
 
     let mut todo = list_all_proposals();
     let mut stats = Statistics {
-        total_checks: todo.len() as u64,
+        total_checks: todo.len(),
         ..Default::default()
     };
     let mut results = Results::default();
@@ -81,7 +60,7 @@ async fn scan(
                     Ok(recv_bytes) => {
                         trace!("Received bytes: {:#?}", &recv_buffer[..recv_bytes]);
                         stats.recv_bytes += recv_bytes as u64;
-                        handle_receiving(&mut stats, &recv_buffer[..recv_bytes]);
+                        handle_receiving(&mut stats, &mut results, &recv_buffer[..recv_bytes]);
                     }
                     Err(e) => {
                         error!("Failed to read bytes from socket: {e}");
@@ -92,8 +71,10 @@ async fn scan(
 
             // Send a new packet to the destination
             _ = sending_interval.tick() => {
-                // TODO
                 trace!("Sending packet");
+                if !handle_sending_hello(&mut stats, &mut open, &mut todo, &socket, &options).await? {
+                    debug!("Reached threshold for open connections, not sent new packets")
+                };
             }
 
             // Control channel functionality
@@ -105,7 +86,11 @@ async fn scan(
                         break;
                     }
                     ControlChannelEvent::DumpState(ch) => {
-                        ch.send(dump_state(&mut open, &mut todo, &mut stats, &mut results, &options)).expect("can't send state via channel")
+                        let dump = dump_state(&mut open, &mut todo, &mut stats, &mut results, &options, &scan_started);
+                        ch.send(dump).expect("can't send state dump via channel")
+                    }
+                    ControlChannelEvent::Stats(ch) => {
+                        ch.send(stats.clone()).expect("can't send stats via channel")
                     }
                     ControlChannelEvent::Progress(ch) => {
                         ch.send(0.0).expect("can't send progress via channel");
@@ -118,8 +103,7 @@ async fn scan(
         }
     }
 
-    // TODO: actually scan something
-    Ok(())
+    Ok((results, stats))
 }
 
 fn dump_state(
@@ -128,13 +112,38 @@ fn dump_state(
     stats: &mut Statistics,
     results: &mut Results,
     opts: &ScanOptionsV2,
+    scan_started: &Instant,
 ) -> ScannerSerialization {
-    ScannerSerialization {}
+    let now = SystemTime::now();
+    let since_start = scan_started.elapsed();
+    let scan_started = (now - since_start)
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    ScannerSerialization {
+        target: opts.ip,
+        target_port: opts.port,
+        retry_len: open.retry.len(),
+        statistics: stats.clone(),
+        scan_started,
+        elapsed_ms: since_start.as_millis() as u64,
+        save_created: now
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        open: HashMap::new(),
+        accepted: results.accepted.clone(),
+        rejected: results.rejected.clone(),
+        invalid_syntax: results.invalid_syntax.clone(),
+        todo: todo.clone(),
+        vendor_ids: results.vendor_ids.clone(),
+    }
 }
 
 /// Handler around a running IKEv2 scan
 pub struct ScanV2Handler {
-    task: JoinHandle<Result<(), ScanError>>,
+    task: JoinHandle<Result<(Results, Statistics), ScanError>>,
     socket: Arc<UdpSocket>,
     controller: mpsc::Sender<ControlChannelEvent>,
 }
@@ -181,7 +190,7 @@ impl ScanV2Handler {
     }
 
     /// Complete the running scan and yield its result
-    pub async fn complete(self) -> Result<Result<(), ScanError>, JoinError> {
+    pub async fn complete(self) -> Result<Result<(Results, Statistics), ScanError>, JoinError> {
         self.task.await
     }
 }

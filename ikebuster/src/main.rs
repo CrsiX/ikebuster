@@ -99,6 +99,17 @@ pub struct DataOutput {
 
 /// Main function for the IKEv2 mode which is called via the actual main function as a wrapper
 async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+    let options = ScanOptionsV2 {
+        ip: cli.ip,
+        port: cli.port,
+        listen_port: cli.listen_port,
+        interval: cli.interval,
+        transform_no: cli.transforms,
+        json_state: cli.json_state.clone(),
+    };
+
+    let handler = ikebuster::v2_utils::scanner2::start_scan(&options).await?;
+    let (result, statistics) = handler.complete().await??;
     Ok(())
 }
 
