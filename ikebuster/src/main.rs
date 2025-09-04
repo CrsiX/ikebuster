@@ -14,6 +14,8 @@ use ikebuster::{v2_utils, ScanError};
 use isakmp::v1::generator::Transform;
 use owo_colors::OwoColorize;
 use serde::Serialize;
+use tokio::select;
+use tokio::time::interval;
 use tracing::{debug, info};
 
 const BANNER: &str = r#"
@@ -111,7 +113,48 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let now = std::time::Instant::now();
-    let handler = ikebuster::v2_utils::scanner2::start_scan(&options).await?;
+    let handler = v2_utils::scanner2::start_scan(&options).await?;
+    let mut ticker = interval(Duration::from_millis(500));
+    let mut updater = interval(Duration::from_millis(10_000));
+    updater.tick().await;
+    loop {
+        select! {
+            _ = ticker.tick() => {
+                if handler.is_finished() {
+                    break;
+                }
+            }
+            _ = updater.tick() => {
+                let progress = handler.progress().await;
+                let stats = handler.stats().await;
+                if let Some(stats) = stats {
+                    debug!(
+                        sent_bytes = stats.sent_bytes,
+                        sent_packets = stats.sent_packets,
+                        recv_bytes = stats.recv_bytes,
+                        recv_packets = stats.recv_packets,
+                        errors = stats.errors,
+                        "Stats: {:.1}%. Sent {} bytes / {} packets. Received {} bytes / {} packets. {} errors.",
+                        progress.unwrap_or_default() * 100f64,
+                        stats.sent_bytes,
+                        stats.sent_packets,
+                        stats.recv_bytes,
+                        stats.recv_packets,
+                        stats.errors
+                    );
+                }
+
+                if let Some(json_state_path) = &cli.json_state {
+                    if let Some(state) = handler.dump_state().await {
+                        let mut file = File::create(json_state_path)?;
+                        let content = serde_json::to_string_pretty(&state)?;
+                        let _ = file.write(content.as_bytes())?;
+                    }
+                }
+            }
+        }
+    }
+
     let (results, statistics) = handler.complete().await??;
     let elapsed = now.elapsed();
     info!(

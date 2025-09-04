@@ -16,7 +16,7 @@ use tracing::{debug, error, info, trace, warn};
 
 use crate::v2_utils::gen_proposals::list_all_proposals;
 use crate::v2_utils::receiver::handle_receiving;
-use crate::v2_utils::scanner::ScannerSerialization;
+use crate::v2_utils::scanner::{ScannerSerialization, RECEIVE_TIMEOUT};
 use crate::v2_utils::sender::handle_sending_hello;
 use crate::v2_utils::{Open, Results, ScanOptionsV2, Statistics};
 use crate::ScanError;
@@ -73,7 +73,12 @@ async fn scan(
             _ = sending_interval.tick() => {
                 trace!("Sending packet");
                 if !handle_sending_hello(&mut stats, &mut open, &mut todo, &socket, &options).await? {
-                    debug!("Reached threshold for open connections, not sent new packets")
+                    debug!("Reached threshold for open connections, did not send new packets");
+                    let now = Instant::now();
+                    if open.sent.iter().all(|(_, i)| (now - *i) > RECEIVE_TIMEOUT) {
+                        error!("Timeout reached while waiting for incoming packets");
+                        return Err(ScanError::Timeout(RECEIVE_TIMEOUT))
+                    };
                 };
             }
 
@@ -93,10 +98,11 @@ async fn scan(
                         ch.send(stats.clone()).expect("can't send stats via channel")
                     }
                     ControlChannelEvent::Progress(ch) => {
-                        ch.send(0.0).expect("can't send progress via channel");
+                        let progress = (stats.total_checks - todo.len()) as f64 / stats.total_checks as f64;
+                        ch.send(progress).expect("can't send progress via channel");
                     }
                     ControlChannelEvent::Remaining(ch) => {
-                        ch.send(1).expect("can't send remaining via channel");
+                        ch.send(todo.len()).expect("can't send remaining via channel");
                     }
                 }
             }
@@ -170,6 +176,20 @@ impl ScanV2Handler {
         if self
             .controller
             .send(ControlChannelEvent::DumpState(tx))
+            .await
+            .is_err()
+        {
+            return None;
+        };
+        rx.await.ok()
+    }
+
+    /// Get statistics from the currently running scan
+    pub async fn stats(&self) -> Option<Statistics> {
+        let (tx, rx) = oneshot::channel();
+        if self
+            .controller
+            .send(ControlChannelEvent::Stats(tx))
             .await
             .is_err()
         {
