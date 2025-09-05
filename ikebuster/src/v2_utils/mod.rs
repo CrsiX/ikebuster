@@ -61,8 +61,16 @@ pub struct Results {
 
 #[derive(Debug, Default)]
 pub struct Open {
+    /// List of sent [IKEv2] packets and the timestamp when they were sent; the ordering
+    /// is not important and may be arbitrary due to retry and timeout logic.
     sent: Vec<(IKEv2, Instant)>,
+    /// List of packets that need to be retried to send; they may be modified (e.g. for Cookie
+    /// payloads), and they also include other payloads (e.g. the Delete packet).
     retry: Vec<IKEv2>,
+    /// List of vectors of [Proposal]s that should be sent again in a new packet soon to
+    /// verify them; the ordering is not important. Note that [Proposal]s in this list may
+    /// have been sent to the responder already in a larger bulk but needed to be split up again.
+    verify: Vec<Vec<Proposal>>,
 }
 
 impl Results {

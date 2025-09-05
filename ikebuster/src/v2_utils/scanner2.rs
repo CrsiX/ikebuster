@@ -12,12 +12,12 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tokio::task::{JoinError, JoinHandle};
 use tokio::time::{interval, MissedTickBehavior};
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, instrument, trace};
 
 use crate::v2_utils::gen_proposals::list_all_proposals;
 use crate::v2_utils::receiver::handle_receiving;
 use crate::v2_utils::scanner::{ScannerSerialization, RECEIVE_TIMEOUT};
-use crate::v2_utils::sender::handle_sending_hello;
+use crate::v2_utils::sender::{handle_sending_hello, send_packet};
 use crate::v2_utils::{Open, Results, ScanOptionsV2, Statistics};
 use crate::ScanError;
 
@@ -30,6 +30,12 @@ enum ControlChannelEvent {
     Remaining(oneshot::Sender<usize>),
 }
 
+/// Timeout when a host that was alive before stopped sending over 30 minutes ago
+pub const HOST_DEAD_TIMEOUT: Duration = Duration::from_secs(1800); // 30 minutes
+
+/// Perform the actual scan of the target for all possible proposals.
+/// This should be executed in a tokio task. Use the control socket for interaction.
+#[instrument(skip_all, fields(options))]
 async fn scan(
     mut control_rx: mpsc::Receiver<ControlChannelEvent>,
     socket: Arc<UdpSocket>,
@@ -48,6 +54,7 @@ async fn scan(
     };
     let mut results = Results::default();
     let mut open = Open::default();
+    let mut last_received_packet = None;
 
     const MAX_DATAGRAM_SIZE: usize = 65_507;
     let mut recv_buffer = [0u8; MAX_DATAGRAM_SIZE];
@@ -59,8 +66,9 @@ async fn scan(
                 match recv_result {
                     Ok(recv_bytes) => {
                         trace!("Received bytes: {:#?}", &recv_buffer[..recv_bytes]);
+                        last_received_packet = Some(Instant::now());
                         stats.recv_bytes += recv_bytes as u64;
-                        handle_receiving(&mut stats, &mut results, &recv_buffer[..recv_bytes]);
+                        handle_receiving(&mut stats, &mut open, &mut results, &recv_buffer[..recv_bytes]);
                     }
                     Err(e) => {
                         error!("Failed to read bytes from socket: {e}");
@@ -76,8 +84,24 @@ async fn scan(
                     debug!("Reached threshold for open connections, did not send new packets");
                     let now = Instant::now();
                     if open.sent.iter().all(|(_, i)| (now - *i) > RECEIVE_TIMEOUT) {
-                        error!("Timeout reached while waiting for incoming packets");
-                        return Err(ScanError::Timeout(RECEIVE_TIMEOUT))
+                        // If no packets were received and all sent packets timed out, the
+                        // host is either dead or went into DoS protection and drops packets.
+                        // DoS protection is likely not active at the very beginning of the
+                        // program, thus it is likely that any response is received if there is
+                        // an IKE responder on the other side.
+                        if stats.recv_bytes == 0 {
+                            error!("Timeout reached while waiting for incoming packets, does the host accept IKE connections?");
+                            return Err(ScanError::Timeout(RECEIVE_TIMEOUT))
+                        } else if last_received_packet.is_some_and(|i| Instant::now() - i > HOST_DEAD_TIMEOUT) {
+                            error!("Timeout reached while waiting for incoming packets, the host likely died or disconnected.");
+                            return Err(ScanError::Timeout(HOST_DEAD_TIMEOUT))
+                        }
+                        // Otherwise, if packets were received already and the last packet was
+                        // received less than 30 minutes ago, we just keep retrying with some
+                        // packet, while the retry list is already empty at this point.
+                        if let Some((packet, _)) = open.sent.pop() {
+                            send_packet(packet, &socket, &mut open, &mut stats).await?;
+                        }
                     };
                 };
             }
@@ -155,6 +179,42 @@ pub struct ScanV2Handler {
 }
 
 impl ScanV2Handler {
+    /// Abort the currently running scan
+    pub async fn abort(&self) {
+        let _ = self.controller.send(ControlChannelEvent::Abort).await;
+        self.task.abort()
+    }
+
+    /// Dump the current state of the scan in a serialized format; returns
+    /// None if the scan is currently not running (i.e., on completion returns None as well)
+    pub async fn dump_state(&self) -> Option<ScannerSerialization> {
+        let (tx, rx) = oneshot::channel();
+        if self
+            .controller
+            .send(ControlChannelEvent::DumpState(tx))
+            .await
+            .is_err()
+        {
+            return None;
+        };
+        rx.await.ok()
+    }
+
+    /// Get statistics from the currently running scan; returns
+    /// None if the scan is currently not running (i.e., on completion returns None as well)
+    pub async fn stats(&self) -> Option<Statistics> {
+        let (tx, rx) = oneshot::channel();
+        if self
+            .controller
+            .send(ControlChannelEvent::Stats(tx))
+            .await
+            .is_err()
+        {
+            return None;
+        };
+        rx.await.ok()
+    }
+
     /// Poll the running scan to determine the current progress (value between 0 and 1, inclusive);
     /// returns None if the scan is currently not running (i.e., on completion returns None as well)
     pub async fn progress(&self) -> Option<f64> {
@@ -170,38 +230,19 @@ impl ScanV2Handler {
         rx.await.ok()
     }
 
-    /// Dump the current state of the scan in a serialized format
-    pub async fn dump_state(&self) -> Option<ScannerSerialization> {
+    /// Poll the running scan to determine how many proposals are left to be checked;
+    /// returns None if the scan is currently not running (i.e., on completion returns None as well)
+    pub async fn remaining(&self) -> Option<usize> {
         let (tx, rx) = oneshot::channel();
         if self
             .controller
-            .send(ControlChannelEvent::DumpState(tx))
+            .send(ControlChannelEvent::Remaining(tx))
             .await
             .is_err()
         {
             return None;
         };
         rx.await.ok()
-    }
-
-    /// Get statistics from the currently running scan
-    pub async fn stats(&self) -> Option<Statistics> {
-        let (tx, rx) = oneshot::channel();
-        if self
-            .controller
-            .send(ControlChannelEvent::Stats(tx))
-            .await
-            .is_err()
-        {
-            return None;
-        };
-        rx.await.ok()
-    }
-
-    /// Abort the currently running scan
-    pub async fn abort(&self) {
-        let _ = self.controller.send(ControlChannelEvent::Abort).await;
-        self.task.abort()
     }
 
     /// Check if the running scan is finished
