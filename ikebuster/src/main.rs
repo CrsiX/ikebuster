@@ -113,10 +113,19 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let now = std::time::Instant::now();
-    let handler = v2_utils::scanner2::start_scan(&options).await?;
-    let mut ticker = interval(Duration::from_millis(500));
-    let mut updater = interval(Duration::from_millis(10_000));
+    let handler = match v2_utils::scanner2::start_scan(&options).await {
+        Ok(handler) => handler,
+        Err(err) => {
+            if let ScanError::CouldNotBind(e) = &err {
+                print_couldnt_bind_solution(cli.listen_port, e)?
+            };
+            return Err(err.into());
+        }
+    };
+    let mut ticker = interval(Duration::from_millis(1_500));
+    let mut updater = interval(Duration::from_millis(15_000));
     updater.tick().await;
+
     loop {
         select! {
             _ = ticker.tick() => {
@@ -124,18 +133,16 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
                     break;
                 }
             }
+
             _ = updater.tick() => {
                 let progress = handler.progress().await;
+                let remaining = handler.remaining().await;
                 let stats = handler.stats().await;
                 if let Some(stats) = stats {
-                    debug!(
-                        sent_bytes = stats.sent_bytes,
-                        sent_packets = stats.sent_packets,
-                        recv_bytes = stats.recv_bytes,
-                        recv_packets = stats.recv_packets,
-                        errors = stats.errors,
-                        "Stats: {:.1}%. Sent {} bytes / {} packets. Received {} bytes / {} packets. {} errors.",
+                    println!(
+                        "Stats: {:.1}%. {} remaining. Sent {} bytes / {} packets. Received {} bytes / {} packets. {} errors.",
                         progress.unwrap_or_default() * 100f64,
+                        remaining.unwrap_or(usize::MAX),
                         stats.sent_bytes,
                         stats.sent_packets,
                         stats.recv_bytes,
@@ -200,6 +207,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         })?;
         let _ = file.write(content.as_bytes())?;
     }
+    // TODO: print results to stdout as well
     Ok(())
 }
 
@@ -249,18 +257,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(err) => {
             match err {
                 ScanError::CouldNotBind(e) => {
-                    owo_println!("---------------");
-                    owo_println!("Could not bind to local port 500".red().bold());
-                    owo_println!(format!("\t{e}").red().bold());
-                    owo_println!("---------------");
-                    owo_println!("Possible solutions:");
-                    owo_println!(format!("\tsudo {}", env::current_exe()?.display()).bright_black());
-                    owo_println!(format!(
-                        "\tsetcap 'cap_net_bind_service=+ep' {}",
-                        env::current_exe()?.display()
-                    )
-                    .bright_black());
-                    owo_println!("---------------");
+                    print_couldnt_bind_solution(500, &e)?;
                 }
                 _ => {
                     owo_println!(format!("{err}").red().bold());
@@ -326,5 +323,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     owo_println!("---------------");
     owo_println!("See you soon! :)".blue());
 
+    Ok(())
+}
+
+fn print_couldnt_bind_solution(port: u16, e: &std::io::Error) -> Result<(), std::io::Error> {
+    owo_println!("---------------");
+    owo_println!(format!("Could not bind to local port {}", port)
+        .red()
+        .bold());
+    owo_println!(format!("\t{e}").red().bold());
+    owo_println!("---------------");
+    owo_println!("Possible solutions:");
+    owo_println!(format!("\tsudo {}", env::current_exe()?.display()).bright_black());
+    owo_println!(format!(
+        "\tsetcap 'cap_net_bind_service=+ep' {}",
+        env::current_exe()?.display()
+    )
+    .bright_black());
+    owo_println!("---------------");
     Ok(())
 }
