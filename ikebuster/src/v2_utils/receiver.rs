@@ -4,6 +4,11 @@ use tracing::{debug, error, instrument, warn};
 
 use crate::v2_utils::{Open, Results, Statistics};
 
+/// Max number of proposals in a `NO_PROPOSAL_CHOSEN` reply that are confirmed
+/// to be rejected by the responder; if more than this number of proposals was sent
+/// and got rejected, it should be split up and retried instead of counted as rejected
+pub const MAX_NO_PROPOSALS_CONFIRMED_LENGTH: usize = 6;
+
 #[instrument(skip_all)]
 pub(crate) fn handle_receiving(
     stats: &mut Statistics,
@@ -180,18 +185,26 @@ fn handle_unsuccessful_responses(
                 }
             }
             v => {
-                // For more than one proposal, it is not known which proposal might have caused
-                // problems; thus we simply split them in half to perform a binary search
-                let [mut a, mut b] = [vec![], vec![]];
-                for x in v {
-                    if a.len() == b.len() {
-                        a.push(x.clone());
-                    } else {
-                        b.push(x.clone());
+                if variant == NotifyErrorMessage::NoProposalChosen
+                    && v.len() <= MAX_NO_PROPOSALS_CONFIRMED_LENGTH
+                {
+                    for p in v {
+                        results.rejected.push(p.clone())
                     }
+                } else {
+                    // For more than one proposal, it is not known which proposal might have caused
+                    // problems; thus we simply split them in half to perform a binary search
+                    let [mut a, mut b] = [vec![], vec![]];
+                    for x in v {
+                        if a.len() == b.len() {
+                            a.push(x.clone());
+                        } else {
+                            b.push(x.clone());
+                        }
+                    }
+                    open.verify.push(a);
+                    open.verify.push(b);
                 }
-                open.verify.push(a);
-                open.verify.push(b);
             }
         }
     }
