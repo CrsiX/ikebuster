@@ -79,7 +79,16 @@ async fn scan(
 
             // Send a new packet to the destination
             _ = sending_interval.tick() => {
-                trace!("Sending packet");
+                if open.sent.is_empty()
+                    && open.retry.is_empty()
+                    && open.verify.is_empty()
+                    && last_received_packet.is_some()
+                    && todo.is_empty()
+                {
+                    debug!("Search completed");
+                    break;
+                }
+                trace!(sent = open.sent.len(), retry = open.retry.len(), verify = open.verify.len(), todo = todo.len(), "Sending packet");
                 if !handle_sending_hello(&mut stats, &mut open, &mut todo, &socket, &options).await? {
                     debug!("Reached threshold for open connections, did not send new packets");
                     let now = Instant::now();

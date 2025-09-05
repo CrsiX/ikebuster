@@ -12,10 +12,11 @@ use crate::v2_utils::{Open, ScanOptionsV2, Statistics};
 use crate::ScanError;
 
 /// Maximum number of packets that should be kept in `open` state simultaneously
-const SENT_THRESHOLD: usize = 4;
+const SENT_THRESHOLD: usize = 5;
 
 /// Send IKEv2 `IKE_SA_INIT` packages, returning whether any packet was sent;
-/// it will first retry any packet that has already been sent at least once
+/// it will first retry any packet that has already been sent at least once,
+/// and then check for proposal lists that need to be verified
 pub(crate) async fn handle_sending_hello(
     stats: &mut Statistics,
     open: &mut Open,
@@ -31,6 +32,13 @@ pub(crate) async fn handle_sending_hello(
     if open.sent.len() >= SENT_THRESHOLD {
         return Ok(false);
     }
+    if let Some(proposals) = open.verify.pop() {
+        if let Some(packet) = make_new_hello_packet(proposals) {
+            send_packet(packet, socket, open, stats).await?;
+        }
+        return Ok(true);
+    }
+
     let mut proposals = vec![];
     for _ in 0..options.transform_no {
         if let Some(proposal) = todo.pop_front() {

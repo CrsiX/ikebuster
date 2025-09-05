@@ -55,28 +55,17 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
     for payload in packet.payloads.iter() {
         if let Payload::Notify(n) = payload {
             match n.variant {
-                NotificationType::Error(e) => {
-                    match e {
-                        NotifyErrorMessage::NoProposalChosen
-                        | NotifyErrorMessage::InvalidSyntax => {
-                            let (open_packet, _) = open.sent.swap_remove(tracked_packet_index);
-                            return handle_rejected_or_invalid(
-                                open_packet,
-                                open,
-                                stats,
-                                results,
-                                e,
-                            );
-                        }
-                        NotifyErrorMessage::InvalidKeyExchangePayload => {
-                            // TODO: add support for InvalidKeyExchangePayload
-                            warn!(packet = ?packet, "InvalidKeyExchangePayload unsupported");
-                        }
-                        _ => {
-                            warn!(packet = ?packet, "Unexpected error notification: {:?}", n);
-                        }
+                NotificationType::Error(e) => match e {
+                    NotifyErrorMessage::NoProposalChosen
+                    | NotifyErrorMessage::InvalidSyntax
+                    | NotifyErrorMessage::InvalidKeyExchangePayload => {
+                        let (open_packet, _) = open.sent.swap_remove(tracked_packet_index);
+                        return handle_unsuccessful_responses(open_packet, open, stats, results, e);
                     }
-                }
+                    _ => {
+                        warn!(packet = ?packet, "Unexpected error notification: {:?}", n);
+                    }
+                },
                 NotificationType::Status(s) => {
                     match s {
                         NotifyStatusMessage::Cookie => {
@@ -124,6 +113,8 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
                             todo.push(p);
                         }
                     }
+                    // Only the single accepted proposal is treated as finished, all others
+                    // need to be retried to verify that they also work correctly
                     if !todo.is_empty() {
                         open.verify.push(todo);
                     }
@@ -141,7 +132,9 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
     }
 }
 
-fn handle_rejected_or_invalid(
+/// Handle responses that are neither DoS cookies nor successfully established SAs
+#[instrument(skip_all, fields(variant))]
+fn handle_unsuccessful_responses(
     open_packet: IKEv2,
     open: &mut Open,
     stats: &mut Statistics,
@@ -175,11 +168,20 @@ fn handle_rejected_or_invalid(
                         NotifyErrorMessage::InvalidSyntax => {
                             results.invalid_syntax.push(proposal.clone())
                         }
+                        NotifyErrorMessage::InvalidKeyExchangePayload => {
+                            warn!(
+                                packet = ?open_packet,
+                                "Received invalid key exchange payload for a single proposal"
+                            );
+                            results.rejected.push(proposal.clone())
+                        }
                         _ => {}
                     }
                 }
             }
             v => {
+                // For more than one proposal, it is not known which proposal might have caused
+                // problems; thus we simply split them in half to perform a binary search
                 let [mut a, mut b] = [vec![], vec![]];
                 for x in v {
                     if a.len() == b.len() {
