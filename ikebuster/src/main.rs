@@ -207,7 +207,35 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         })?;
         let _ = file.write(content.as_bytes())?;
     }
-    // TODO: print results to stdout as well
+
+    owo_println!("---------------");
+    if findings.is_empty() {
+        owo_println!("No valid transforms found :(".yellow());
+    } else {
+        owo_println!("Found transforms:");
+    }
+    for finding in findings.iter() {
+        owo_println!(format!(
+            "\t{}{} {}{} {}{} {}{}",
+            "ENC=".bright_black(),
+            if let Some(key_len) = finding.key_size {
+                format!("{}/{key_len}", finding.encryption)
+            } else {
+                finding.encryption.to_string()
+            },
+            "INT=".bright_black(),
+            finding
+                .integrity
+                .map(|i| i.to_string())
+                .unwrap_or("<none>".to_string()),
+            "PRF=".bright_black(),
+            finding.prf,
+            "KEX=".bright_black(),
+            finding.kex,
+        ));
+    }
+    owo_println!("---------------");
+
     Ok(())
 }
 
