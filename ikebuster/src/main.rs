@@ -139,7 +139,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
                 let remaining = handler.remaining().await;
                 let stats = handler.stats().await;
                 if let Some(stats) = stats {
-                    println!(
+                    owo_println!(format!(
                         "Stats: {:.1}%. {} remaining. Sent {} bytes / {} packets. Received {} bytes / {} packets. {} errors.",
                         progress.unwrap_or_default() * 100f64,
                         remaining.unwrap_or(usize::MAX),
@@ -148,7 +148,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
                         stats.recv_bytes,
                         stats.recv_packets,
                         stats.errors
-                    );
+                    ));
                 }
 
                 if let Some(json_state_path) = &cli.json_state {
@@ -215,24 +215,26 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         owo_println!("Found transforms:");
     }
     for finding in findings.iter() {
-        owo_println!(format!(
-            "\t{}{} {}{} {}{} {}{}",
-            "ENC=".bright_black(),
-            if let Some(key_len) = finding.key_size {
-                format!("{}/{key_len}", finding.encryption)
-            } else {
-                finding.encryption.to_string()
-            },
-            "INT=".bright_black(),
-            finding
-                .integrity
-                .map(|i| i.to_string())
-                .unwrap_or("<none>".to_string()),
-            "PRF=".bright_black(),
-            finding.prf,
-            "KEX=".bright_black(),
-            finding.kex,
-        ));
+        if finding.result == FindingResult::Accepted {
+            owo_println!(format!(
+                "\t{}{} {}{} {}{} {}{}",
+                "ENC=".bright_black(),
+                if let Some(key_len) = finding.key_size {
+                    format!("{}/{key_len}", finding.encryption)
+                } else {
+                    finding.encryption.to_string()
+                },
+                "INT=".bright_black(),
+                finding
+                    .integrity
+                    .map(|i| i.to_string())
+                    .unwrap_or("<none>".to_string()),
+                "PRF=".bright_black(),
+                finding.prf,
+                "KEX=".bright_black(),
+                finding.kex,
+            ));
+        }
     }
     owo_println!("---------------");
 
@@ -242,6 +244,10 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+    if cli.transforms < 1 {
+        owo_println!("At least one transform is required".bright_red());
+        exit(2);
+    }
 
     if cli.verbose > 0 {
         match cli.verbose {
