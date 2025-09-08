@@ -2,7 +2,7 @@ use isakmp::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage, S
 use isakmp::v2::definitions::{IKEv2, Notification, NotificationType, Payload, Proposal};
 use tracing::{debug, error, instrument, warn};
 
-use crate::v2_utils::{Open, Results, Statistics};
+use crate::v2::{Open, Results, Statistics};
 
 /// Max number of proposals in a `NO_PROPOSAL_CHOSEN` reply that are confirmed
 /// to be rejected by the responder; if more than this number of proposals was sent

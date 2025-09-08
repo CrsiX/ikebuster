@@ -4,7 +4,7 @@ use std::net::IpAddr;
 use isakmp::v2::definitions::Proposal;
 use serde::Serialize;
 
-use crate::v2_utils::Statistics;
+use crate::v2::Statistics;
 
 #[derive(Debug, Serialize)]
 pub struct ScannerSerialization {

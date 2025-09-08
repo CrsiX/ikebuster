@@ -14,12 +14,12 @@ use tokio::task::{JoinError, JoinHandle};
 use tokio::time::{interval, MissedTickBehavior};
 use tracing::{debug, error, info, trace};
 
-use crate::v2_utils::gen_proposals::list_all_proposals;
-use crate::v2_utils::receiver::handle_receiving;
-use crate::v2_utils::sender::{handle_sending_hello, send_packet};
-use crate::v2_utils::serialization::ScannerSerialization;
-use crate::v2_utils::RECEIVE_TIMEOUT;
-use crate::v2_utils::{Open, Results, ScanOptionsV2, Statistics};
+use crate::v2::gen_proposals::list_all_proposals;
+use crate::v2::receiver::handle_receiving;
+use crate::v2::sender::{handle_sending_hello, send_packet};
+use crate::v2::serialization::ScannerSerialization;
+use crate::v2::RECEIVE_TIMEOUT;
+use crate::v2::{Open, Results, ScanOptionsV2, Statistics};
 use crate::ScanError;
 
 #[derive(Debug)]

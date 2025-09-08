@@ -8,10 +8,10 @@ use std::time::Duration;
 
 use clap::ArgAction;
 use clap::Parser;
-use ikebuster::v2_utils::finding::FindingResult;
-use ikebuster::v2_utils::{ScanOptionsV2, ScanResultOutputFormat};
+use ikebuster::v2::finding::FindingResult;
+use ikebuster::v2::{ScanOptionsV2, ScanResultOutputFormat};
 use ikebuster::ScanOptions;
-use ikebuster::{v2_utils, ScanError};
+use ikebuster::{v2, ScanError};
 use isakmp::v1::generator::Transform;
 use owo_colors::OwoColorize;
 use serde::Serialize;
@@ -114,7 +114,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let now = std::time::Instant::now();
-    let handler = match v2_utils::scanner::start_scan(&options).await {
+    let handler = match v2::scanner::start_scan(&options).await {
         Ok(handler) => handler,
         Err(err) => {
             if let ScanError::CouldNotBind(e) = &err {
@@ -191,7 +191,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     let findings = results.to_findings();
     if let Some(csv_path) = &cli.csv {
         let mut file = File::create(csv_path)?;
-        let content = v2_utils::finding::format_to_csv(&findings)?;
+        let content = v2::finding::format_to_csv(&findings)?;
         let _ = file.write(content.as_bytes())?;
     }
     if let Some(json_path) = &cli.json {

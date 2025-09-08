@@ -8,7 +8,7 @@ use isakmp::v2::utils::get_random_vec;
 use tokio::net::UdpSocket;
 use tracing::{debug, error, instrument, warn};
 
-use crate::v2_utils::{Open, ScanOptionsV2, Statistics};
+use crate::v2::{Open, ScanOptionsV2, Statistics};
 use crate::ScanError;
 
 /// Maximum number of packets that should be kept in `open` state simultaneously

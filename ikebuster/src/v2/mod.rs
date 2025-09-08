@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
-use crate::v2_utils::finding::{Finding, FindingResult};
+use crate::v2::finding::{Finding, FindingResult};
 use isakmp::v2::definitions::{IKEv2, Proposal};
 use serde::Serialize;
 

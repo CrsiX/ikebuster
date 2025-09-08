@@ -34,7 +34,7 @@ use crate::utils::payload_to_transforms::payload_to_transforms;
 
 mod recv;
 pub mod utils;
-pub mod v2_utils;
+pub mod v2;
 
 /// The results of the scan
 #[derive(Debug, Clone)]

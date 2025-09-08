@@ -4,6 +4,7 @@ use std::ops::AddAssign;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime};
+use tokio::sync::mpsc;
 
 use isakmp::v2::definitions;
 use isakmp::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage, SecurityProtocol};
@@ -13,10 +14,13 @@ use isakmp::v2::definitions::{
 use isakmp::v2::utils::get_random_vec;
 use serde::Serialize;
 use tokio::net::UdpSocket;
+use tokio::select;
+use tokio::time::interval;
 use tracing::{debug, error, info, warn};
 
 use crate::v2_utils::finding::{Finding, FindingResult};
 use crate::v2_utils::gen_proposals::list_all_proposals;
+use crate::v2_utils::Statistics;
 use crate::ScanError;
 
 #[derive(Clone)]
@@ -48,28 +52,8 @@ pub struct Scanner {
     save_state: Option<fn(String, IpAddr) -> Result<(), ScanError>>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct ScannerSerialization {
-    pub target: IpAddr,
-    pub target_port: u16,
-    pub retry_len: usize,
-    pub statistics: Statistics,
-    /// UNIX timestamp when the scan was started
-    pub scan_started: u64,
-    /// Elapsed scan time in milliseconds
-    pub elapsed_ms: u64,
-    /// UNIX timestamp when this file was created
-    pub save_created: u64,
-    pub open: HashMap<u64, Vec<Proposal>>,
-    pub accepted: Vec<Proposal>,
-    pub rejected: Vec<Proposal>,
-    pub invalid_syntax: Vec<Proposal>,
-    pub todo: VecDeque<Proposal>,
-    pub vendor_ids: Vec<Vec<u8>>,
-}
-
 /// Delay between sending packets
-const SENDING_DELAY: Duration = Duration::from_millis(1_000);
+const SENDING_DELAY: Duration = Duration::from_millis(100);
 
 /// Delay for waiting on incoming packets if we still await some
 const WAITING_DELAY: Duration = Duration::from_millis(1_000);
@@ -453,7 +437,7 @@ impl Scanner {
 
     fn update_progress(&self) -> Result<(), ScanError> {
         let todo = self.todo.lock().unwrap().len();
-        if todo % 1000 == 0 {
+        if todo % 100 == 0 {
             debug!(
                 "Progress: Left todo: {} ({:.2}% done) after {:#?}, {} errors, {} accepted, {} sent, {} received",
                 todo,
