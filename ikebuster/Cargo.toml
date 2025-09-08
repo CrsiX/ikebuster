@@ -38,6 +38,9 @@ thiserror = { version = "~2" }
 # Async runtime
 tokio = { version = ">=1.23.1", features = ["rt-multi-thread", "macros", "net", "sync", "time"] }
 
+# RNG
+rand = { version = "~0.9" }
+
 # Tracing
 tracing = { version = "~0.1" }
 tracing-subscriber = { version = "~0.3", optional = true }

@@ -2,9 +2,10 @@
 //! found at https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml!
 //! Also take a look at RFC 8247, section 2.4 for further security considerations.
 
-use super::{Payload, Transform, UnparseableParameter};
-
+use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter};
+
+use super::{Payload, Transform, UnparseableParameter};
 
 /// Type of the exchanged being used
 ///
@@ -68,7 +69,8 @@ impl TryFrom<u8> for ExchangeType {
 /// Refer to https://www.iana.org/assignments/ikev2-parameters/ikev2-parameters.xhtml
 /// for details. Notably, values 1-33 are reserved, 55-127 are currently unassigned
 /// and 128-255 reserved for private use. Also see [UnparseableParameter].
-#[derive(Debug, Display, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum PayloadType {
@@ -187,7 +189,8 @@ impl From<&Payload> for PayloadType {
 /// "Sequence Numbers (SN)" transform type was originally named
 /// "Extended Sequence Numbers (ESN)" and was referenced by
 /// that name in a number of RFCs published before RFC 9370.
-#[derive(Debug, Display, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum TransformType {
@@ -258,7 +261,8 @@ impl From<&Transform> for TransformType {
 ///
 /// Values 0-13 and 15-17 are reserved, 19-16383 are unassigned and
 /// 16384-32767 reserved for private use.
-#[derive(Debug, Display, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum AttributeType {
@@ -294,7 +298,8 @@ impl TryFrom<u16> for AttributeType {
 /// The values 11, 21, 29, 30, 31, 34 and 35 are assigned by IANA but not allowed
 /// for use in IKE and will therefore respond to [UnparseableParameter::NotAllowed]
 /// when parsed from u16; they are allowed for building the packets though.
-#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 // On the following CCM and GCM ciphers, the number that follows the cipher indicates
@@ -389,7 +394,8 @@ impl TryFrom<u16> for EncryptionAlgorithm {
 ///
 /// To find out requirement levels for PRFs for IKEv2, see RFC 8247.
 /// Values 0 is reserved, 10-1023 are unassigned and 1024-65535 reserved for private use.
-#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum PseudorandomFunction {
@@ -430,7 +436,8 @@ impl TryFrom<u16> for PseudorandomFunction {
 /// To find out requirement levels for encryption algorithms for
 /// ESP/AH, see RFC 8221. For IKEv2, see RFC 8247.
 /// Values 15-1023 are unassigned and 1024-65535 reserved for private use.
-#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum IntegrityAlgorithm {
@@ -488,7 +495,8 @@ impl TryFrom<u16> for IntegrityAlgorithm {
 /// transform type and by all "Additional Key Exchange (ADDKE)"
 /// transform types. To find out requirement levels for key
 /// exchange methods for IKEv2, see RFC 8247.
-#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum KeyExchangeMethod {
@@ -568,7 +576,8 @@ impl TryFrom<u16> for KeyExchangeMethod {
 /// The default is likely to be [SequenceNumberType::Sequential32bit],
 /// as it was originally called "No Extended Sequence Numbers".
 /// Values 3-1023 are unassigned and 1024-65535 are reserved for private use.
-#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum SequenceNumberType {
@@ -594,7 +603,8 @@ impl TryFrom<u16> for SequenceNumberType {
 /// Indicator for the encoding of certificates and related data
 ///
 /// Values 0 and 5 are reserved, 16-200 are unassigned and 201-255 are reserved for private use.
-#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum CertificateEncoding {
@@ -645,7 +655,8 @@ impl TryFrom<u8> for CertificateEncoding {
 ///
 /// Value 0 is reserved, values 4-8 and 15-200 are unassigned and
 /// values 201-255 are reserved for private use.
-#[derive(Debug, Display, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
 #[allow(non_camel_case_types, missing_docs)]
 pub enum AuthenticationMethod {
@@ -686,7 +697,8 @@ impl TryFrom<u8> for AuthenticationMethod {
 ///
 /// The values 0, 2, 3, 6, 8, 10, 12, 13, 15, 16, 18-23, 25-33 are reserved.
 /// Values 50-8191 are currently unassigned and 8192-65535 reserved for private use.
-#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum NotifyErrorMessage {
@@ -781,7 +793,8 @@ impl TryFrom<u16> for NotifyErrorMessage {
 /// values 7-200 are unassigned and 201-255 reserved for private use.
 ///
 /// In this project, only [SecurityProtocol::InternetKeyExchange] is relevant.
-#[derive(Debug, Display, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum SecurityProtocol {
@@ -815,7 +828,8 @@ impl TryFrom<u8> for SecurityProtocol {
 /// Values for the hash algorithm identifier
 ///
 /// Values 0 are reserved, 8-1023 unassigned and 1024-65535 reserved for private use.
-#[derive(Debug, Display, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum HashAlgorithm {
@@ -855,7 +869,8 @@ impl TryFrom<u16> for HashAlgorithm {
 ///
 /// Values 0-16383 are out of range, 16447-40959 currently unassigned and
 /// 40960-65535 reserved for private use.
-#[derive(Debug, Display, EnumIter, Clone, Ord, PartialOrd, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
 #[allow(missing_docs)]
 pub enum NotifyStatusMessage {

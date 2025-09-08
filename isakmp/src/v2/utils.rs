@@ -2,13 +2,6 @@
 
 use crate::v2::definitions::Proposal;
 
-/// Create a `Vec<u8>` filled with random bytes
-///
-/// These bytes are not guaranteed to be cryptographically safe.
-pub fn get_random_vec(len: usize) -> Vec<u8> {
-    rand::random_iter().take(len).collect()
-}
-
 /// Format a list of [Proposal]s into a serialized CSV interpretation
 pub fn format_to_csv(proposals: Vec<Proposal>) -> Result<String, std::fmt::Error> {
     let mut counter = 0;

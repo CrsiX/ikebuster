@@ -5,20 +5,22 @@ pub mod header;
 mod impls;
 pub mod params;
 
+use serde::{Deserialize, Serialize};
+use strum::Display;
+
 pub use super::super::v1::definitions::GenericPayloadHeader;
 pub use super::super::v1::definitions::Header;
-use crate::v2::definitions::params::{
-    CertificateEncoding, NotifyErrorMessage, NotifyStatusMessage,
-};
 use params::{
-    EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod, PayloadType,
-    PseudorandomFunction, SecurityProtocol, SequenceNumberType, TransformType,
+    CertificateEncoding, EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod,
+    NotifyErrorMessage, NotifyStatusMessage, PseudorandomFunction, SecurityProtocol,
+    SequenceNumberType,
 };
 
 /// When parsing a parameter from u8, there are several "regions" in the definitions
 /// that can't be defined by Rusts enum. Typically, the last two regions of the
 /// parameter definitions are unassigned and/or reserved for private use.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Display, Copy, Serialize, Deserialize)] //
+#[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u8)]
 pub enum UnparseableParameter {
     /// The parameter is reserved and must not be used, as it may conflict with older standards
@@ -122,10 +124,13 @@ pub enum Payload {
 /// ciphers and normal ciphers, it must include two proposals: one
 /// will have all the combined-mode ciphers, and the other will have all
 /// the normal ciphers with the integrity algorithms.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SecurityAssociation {
     pub proposals: Vec<Proposal>,
 }
+
+// #[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
+// #[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 
 /// High-level representation of a Proposal
 ///
@@ -136,7 +141,7 @@ pub struct SecurityAssociation {
 /// and an encryption algorithm. For each Protocol, the set of
 /// permissible transforms is assigned Transform ID numbers, which appear
 /// in the header of each transform.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Proposal {
     /// Identifier for the security protocol to be used in this proposal,
     /// must be [SecurityProtocol::InternetKeyExchange] to work in this project
@@ -154,7 +159,7 @@ pub struct Proposal {
 
 /// High-level representation of a transformation and all required additional
 /// information that is dynamically built from incoming packets. See [TransformType].
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Transform {
     Encryption(EncryptionAlgorithm, Option<u16>),
     PseudoRandomFunction(PseudorandomFunction),
@@ -163,21 +168,21 @@ pub enum Transform {
     SequenceNumber(SequenceNumberType),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Attribute {
     /// Key-length in bits for variable-length encryption ciphers like AES-CBC
     KeyLength(u16),
 }
 
 /// High-level representation of a Key Exchange
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyExchange {
     pub dh_group: KeyExchangeMethod,
     pub data: Vec<u8>,
 }
 
 /// High-level representation of a Certificate Request
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CertificateRequest {
     pub encoding: CertificateEncoding,
     pub certification_authority: Vec<u8>,
@@ -187,7 +192,7 @@ pub struct CertificateRequest {
 ///
 /// Error and status messages may have additional data, depending on their type.
 /// For this representation, these are not parsed and provided as [`Vec<u8>`] instead.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Notification {
     pub variant: NotificationType,
     pub data: Vec<u8>,
@@ -195,14 +200,14 @@ pub struct Notification {
     pub spi: Option<Vec<u8>>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NotificationType {
     Error(NotifyErrorMessage),
     Status(NotifyStatusMessage),
 }
 
 /// High-level representation of a Deletion (Delete payload)
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Deletion {
     InternetKeyExchange,
     AuthenticationHeader(Vec<u32>),

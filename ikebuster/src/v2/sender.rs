@@ -4,7 +4,6 @@ use std::time::Instant;
 
 use isakmp::v2::definitions::constants::MIN_SUPPORTED_MSG_SIZE;
 use isakmp::v2::definitions::{IKEv2, KeyExchange, Payload, Proposal, SecurityAssociation};
-use isakmp::v2::utils::get_random_vec;
 use tokio::net::UdpSocket;
 use tracing::{debug, error, instrument, warn};
 
@@ -165,4 +164,11 @@ fn count_proposals(packet: &IKEv2) -> usize {
             _ => None,
         })
         .sum()
+}
+
+/// Create a `Vec<u8>` filled with random bytes
+///
+/// These bytes are not guaranteed to be cryptographically safe.
+pub fn get_random_vec(len: usize) -> Vec<u8> {
+    rand::random_iter().take(len).collect()
 }
