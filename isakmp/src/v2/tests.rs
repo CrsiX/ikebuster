@@ -3,7 +3,7 @@ use crate::v2::definitions::params::{
     NotifyStatusMessage, PayloadType, PseudorandomFunction, SecurityProtocol,
 };
 use crate::v2::definitions::{
-    GenericPayloadHeader, IKEv2, Notification, NotificationType, Payload, Proposal,
+    GenericPayloadHeader, IKEv2, KeyExchange, Notification, NotificationType, Payload, Proposal,
     SecurityAssociation, Transform,
 };
 use crate::v2::generator::GeneratorError;
@@ -181,4 +181,58 @@ fn generate_and_parse_packet() {
     assert_eq!(ike.payloads.len(), 4);
     assert_eq!(ike.payloads[0], Payload::VendorID(vec![0x42]));
     assert_eq!(ike.payloads[1], Payload::Nonce(nonce));
+}
+
+#[test]
+#[allow(clippy::unwrap_used)]
+fn generate_packet_with_cookie_notification() {
+    let dh_group = KeyExchangeMethod::Curve_25519;
+    let ike = IKEv2 {
+        initiator_cookie: 0x1234567890abcdef,
+        responder_cookie: 0xfedcba0987654321,
+        exchange_type: ExchangeType::IkeSaInit,
+        initiator: true,
+        response: false,
+        message_id: 0x3b20cae8, // random data
+        payloads: vec![
+            Payload::VendorID(vec![0x42]),
+            Payload::SecurityAssociation(SecurityAssociation { proposals: vec![] }),
+            Payload::Notify(Notification {
+                variant: NotificationType::Status(NotifyStatusMessage::Cookie),
+                data: vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08],
+                protocol: SecurityProtocol::Reserved,
+                spi: None,
+            }),
+            Payload::Nonce(vec![
+                0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37, //
+                0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37,
+            ]),
+            Payload::KeyExchange(KeyExchange {
+                dh_group,
+                data: vec![0xff; dh_group.get_key_handshake_length()], // 32 bytes
+            }),
+        ],
+    };
+    let serialized = ike.try_build().unwrap();
+    assert_eq!(serialized.len(), 113);
+    assert_eq!(serialized[16], 0x29); // next payload in IKE header
+    assert_eq!(
+        serialized[28..81],
+        vec![
+            0x2b, 0x00, 0x00, 0x10, // Generic Payload header for cookie
+            0x00, // Security Protocol
+            0x00, // SPI size
+            0x40, 0x06, // Notify Message Type
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // Cookie data
+            0x21, 0x00, 0x00, 0x05, // Generic Payload header for vendor ID
+            0x42, // Vendor ID data
+            0x28, 0x00, 0x00, 0x04, // Generic Payload header for SA
+            0x22, 0x00, 0x00, 0x14, // Generic Payload header for Nonce
+            0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37, // Nonce data 1
+            0x13, 0x37, 0x13, 0x37, 0x13, 0x37, 0x13, 0x37, // Nonce data 2
+            0x00, 0x00, 0x00, 0x28, // Generic Payload header for KE
+            0x00, 0x1f, 0x00, 0x00, // KE header
+        ]
+    );
+    assert_eq!(serialized[81..], vec![0xff; 32]); // Key Exchange payload data
 }

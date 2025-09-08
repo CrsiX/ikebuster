@@ -1,10 +1,11 @@
-use crate::v2::definitions::constants::{FLAG_INITIATOR, FLAG_RESPONSE};
-use crate::v2::definitions::params::PayloadType;
-use crate::v2::definitions::{Header, IKEv2};
-use crate::v2::generator::{GeneratorError, ESTIMATED_PAYLOAD_LENGTH};
-use crate::v2::IKE_2_VERSION_VALUE;
 use zerocopy::network_endian::{U32, U64};
 use zerocopy::AsBytes;
+
+use crate::v2::definitions::constants::{FLAG_INITIATOR, FLAG_RESPONSE};
+use crate::v2::definitions::params::{NotifyStatusMessage, PayloadType};
+use crate::v2::definitions::{Header, IKEv2, NotificationType, Payload};
+use crate::v2::generator::{GeneratorError, ESTIMATED_PAYLOAD_LENGTH};
+use crate::v2::IKE_2_VERSION_VALUE;
 
 impl IKEv2 {
     /// Build a network-level packet from an [IKEv2] packet
@@ -13,22 +14,60 @@ impl IKEv2 {
             return Err(GeneratorError::TooManyPayloads);
         }
         let mut payloads = Vec::with_capacity(ESTIMATED_PAYLOAD_LENGTH * self.payloads.len());
+
+        // If a DoS cookie notification payload is contained in the list of payloads,
+        // it MUST be the first payload and thus moves 'next payload' tracking a little around
+        let mut cookie_payload_index = None;
         for (i, payload) in self.payloads.iter().enumerate() {
-            payloads.extend(payload.try_build(match self.payloads.get(i + 1) {
-                None => PayloadType::NoNextPayload,
-                Some(next) => next.into(),
-            })?);
+            if let Payload::Notify(n) = payload {
+                if let NotificationType::Status(s) = n.variant {
+                    if s == NotifyStatusMessage::Cookie {
+                        cookie_payload_index = Some(i);
+                        let next_payload = if i == 0 {
+                            self.payloads.get(1).map(PayloadType::from)
+                        } else {
+                            self.payloads.first().map(PayloadType::from)
+                        };
+                        payloads.extend(
+                            payload
+                                .try_build(next_payload.unwrap_or(PayloadType::NoNextPayload))?,
+                        );
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (i, payload) in self.payloads.iter().enumerate() {
+            if cookie_payload_index.is_some_and(|x| x == i) {
+                continue;
+            }
+            let mut next_payload_index = i + 1;
+            // If the 'next' payload would be the index of the cookie payload, it needs
+            // to be skipped because it was already handled before
+            if cookie_payload_index.is_some_and(|x| x == next_payload_index) {
+                next_payload_index += 1;
+            }
+            payloads.extend(
+                payload.try_build(match self.payloads.get(next_payload_index) {
+                    None => PayloadType::NoNextPayload,
+                    Some(next) => PayloadType::from(next),
+                })?,
+            );
         }
 
         let packet_length = 28 + payloads.len() as u32;
         let header = Header {
             initiator_cookie: U64::from(self.initiator_cookie),
             responder_cookie: U64::from(self.responder_cookie),
-            next_payload: match self.payloads.first() {
-                None => PayloadType::NoNextPayload,
-                Some(t) => t.into(),
+            next_payload: match cookie_payload_index {
+                Some(_) => PayloadType::Notify,
+                None => match self.payloads.first() {
+                    None => PayloadType::NoNextPayload,
+                    Some(p) => PayloadType::from(p),
+                },
             } as u8,
-            version: IKE_2_VERSION_VALUE, // IKEv2
+            version: IKE_2_VERSION_VALUE,
             exchange_type: self.exchange_type as u8,
             flags: (if self.initiator { FLAG_INITIATOR } else { 0 })
                 | (if self.response { FLAG_RESPONSE } else { 0 }),
