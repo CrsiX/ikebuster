@@ -1,5 +1,5 @@
 use std::net::IpAddr;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::v2_utils::finding::{Finding, FindingResult};
 use isakmp::v2::definitions::{IKEv2, Proposal};
@@ -9,8 +9,11 @@ pub mod finding;
 pub mod gen_proposals;
 pub(crate) mod receiver;
 pub mod scanner;
-pub mod scanner2;
 pub(crate) mod sender;
+pub mod serialization;
+
+/// Timeout for receiving any data from the remote side
+pub const RECEIVE_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Options to "configure" the scanner v2
 #[derive(Debug, Clone)]

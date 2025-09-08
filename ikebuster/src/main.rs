@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use clap::ArgAction;
 use clap::Parser;
+use ikebuster::v2_utils::finding::FindingResult;
 use ikebuster::v2_utils::{ScanOptionsV2, ScanResultOutputFormat};
 use ikebuster::ScanOptions;
 use ikebuster::{v2_utils, ScanError};
@@ -113,7 +114,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let now = std::time::Instant::now();
-    let handler = match v2_utils::scanner2::start_scan(&options).await {
+    let handler = match v2_utils::scanner::start_scan(&options).await {
         Ok(handler) => handler,
         Err(err) => {
             if let ScanError::CouldNotBind(e) = &err {

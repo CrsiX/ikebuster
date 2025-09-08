@@ -129,27 +129,27 @@ fn make_new_hello_packet(mut proposals: Vec<Proposal>) -> Option<(IKEv2, Vec<Pro
         return None;
     };
 
-    let current_len = packet
+    let mut current_len = packet
         .try_build()
         .map_err(ScanError::GeneratorFailed)
         .ok()?
         .len();
 
-    while let Some(next) = proposals.pop() {
+    while let Some(next) = proposals.last() {
         let serialized_proposal_len = next
             .try_build(1, true)
             .map_err(ScanError::GeneratorFailed)
             .ok()?
             .len();
         if current_len + serialized_proposal_len <= MIN_SUPPORTED_MSG_SIZE {
+            current_len += serialized_proposal_len;
             for payload in packet.payloads.iter_mut() {
                 if let Payload::SecurityAssociation(sa) = payload {
-                    sa.proposals.push(next);
+                    sa.proposals.push(proposals.pop()?);
                     break;
                 }
             }
         } else {
-            proposals.push(next);
             break;
         }
     }
