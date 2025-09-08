@@ -5,7 +5,7 @@ use isakmp::v2::definitions::params::{
     EncryptionAlgorithm, IntegrityAlgorithm, KeyExchangeMethod, PseudorandomFunction,
 };
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, PartialEq)]
 pub enum FindingResult {
     Accepted,
     InvalidSyntax,

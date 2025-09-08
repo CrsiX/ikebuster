@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tokio::task::{JoinError, JoinHandle};
 use tokio::time::{interval, MissedTickBehavior};
-use tracing::{debug, error, info, instrument, trace};
+use tracing::{debug, error, info, trace};
 
 use crate::v2_utils::gen_proposals::list_all_proposals;
 use crate::v2_utils::receiver::handle_receiving;
@@ -35,7 +35,6 @@ pub const HOST_DEAD_TIMEOUT: Duration = Duration::from_secs(1800); // 30 minutes
 
 /// Perform the actual scan of the target for all possible proposals.
 /// This should be executed in a tokio task. Use the control socket for interaction.
-#[instrument(skip_all, fields(options))]
 async fn scan(
     mut control_rx: mpsc::Receiver<ControlChannelEvent>,
     socket: Arc<UdpSocket>,
@@ -135,7 +134,8 @@ async fn scan(
                         ch.send(progress).expect("can't send progress via channel");
                     }
                     ControlChannelEvent::Remaining(ch) => {
-                        ch.send(todo.len()).expect("can't send remaining via channel");
+                        let total_len = todo.len() + open.sent.len() + open.verify.len();
+                        ch.send(total_len).expect("can't send remaining via channel");
                     }
                 }
             }

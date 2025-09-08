@@ -1,5 +1,9 @@
 //! Constant values and bit flags for IKEv2
 
+/// Minimum size of a single IKE message (including ISAKMP header but excluding
+/// UDP header) that must be supported by all IKE peers according to RFC 7296
+pub const MIN_SUPPORTED_MSG_SIZE: usize = 1280;
+
 /// Bitflag for IKEv2 (ISAKMP) header to indicate whether the sender of the packet is
 /// an initiator (bit set) or a responder (bit not set); see RFC 7296, section 3.1
 pub const FLAG_INITIATOR: u8 = 0b1000;

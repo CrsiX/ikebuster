@@ -1,10 +1,9 @@
 use std::collections::VecDeque;
-use std::io::ErrorKind;
 use std::sync::Arc;
 use std::time::Instant;
 
-use isakmp::v2::definitions;
-use isakmp::v2::definitions::{IKEv2, Payload, Proposal, SecurityAssociation};
+use isakmp::v2::definitions::constants::MIN_SUPPORTED_MSG_SIZE;
+use isakmp::v2::definitions::{IKEv2, KeyExchange, Payload, Proposal, SecurityAssociation};
 use isakmp::v2::utils::get_random_vec;
 use tokio::net::UdpSocket;
 use tracing::{debug, error, instrument, warn};
@@ -15,9 +14,10 @@ use crate::ScanError;
 /// Maximum number of packets that should be kept in `open` state simultaneously
 const SENT_THRESHOLD: usize = 5;
 
-/// Send IKEv2 `IKE_SA_INIT` packages, returning whether any packet was sent;
+/// Send IKEv2 `IKE_SA_INIT` messages, returning whether any packet was sent;
 /// it will first retry any packet that has already been sent at least once,
-/// and then check for proposal lists that need to be verified
+/// and then check for proposal lists that need to be verified before
+/// trying new proposals that have not been attempted yet
 pub(crate) async fn handle_sending_hello(
     stats: &mut Statistics,
     open: &mut Open,
@@ -34,7 +34,10 @@ pub(crate) async fn handle_sending_hello(
         return Ok(false);
     }
     if let Some(proposals) = open.verify.pop() {
-        if let Some(packet) = make_new_hello_packet(proposals) {
+        if let Some((packet, unused_proposals)) = make_new_hello_packet(proposals) {
+            if !unused_proposals.is_empty() {
+                open.verify.push(unused_proposals);
+            }
             send_packet(packet, socket, open, stats).await?;
         }
         return Ok(true);
@@ -46,7 +49,10 @@ pub(crate) async fn handle_sending_hello(
             proposals.push(proposal);
         }
     }
-    if let Some(packet) = make_new_hello_packet(proposals) {
+    if let Some((packet, unused_proposals)) = make_new_hello_packet(proposals) {
+        for p in unused_proposals {
+            todo.push_front(p)
+        }
         send_packet(packet, socket, open, stats).await?;
     }
     Ok(true)
@@ -75,8 +81,8 @@ pub(crate) async fn send_packet(
             if let Some(e) = err.raw_os_error() {
                 if e == 90 {
                     debug!(
-                        "Detected raw OS error value 90. This is likely due to Path "
-                        "MTU Discovery. Retrying to send the packet once..."
+                        "Detected raw OS error value 90. This is likely due to Path
+                        MTU Discovery. Retrying to send the packet once..."
                     );
                     let sent_bytes = socket.send(serialized_msg.as_slice()).await.map_err(|e| {
                         error!("Failed to resend the packet after MTU discovery: {}", e);
@@ -97,21 +103,57 @@ pub(crate) async fn send_packet(
     Ok(())
 }
 
-fn make_new_hello_packet(proposals: Vec<Proposal>) -> Option<IKEv2> {
-    let dh_group = match proposals.first() {
+/// Construct a new hello packet from a list of proposals that should be used in the
+/// SA of that packet, returning the packet and all unused proposals on success.
+/// Proposals may not all be used if the packet would grow too large if they were added.
+fn make_new_hello_packet(mut proposals: Vec<Proposal>) -> Option<(IKEv2, Vec<Proposal>)> {
+    let mut used_proposals = vec![];
+    if let Some(p) = proposals.pop() {
+        used_proposals.push(p);
+    } else {
+        return None;
+    }
+    let mut packet = if let Some(dh_group) = match used_proposals.first() {
         Some(first) => first.key_exchange_methods.first().cloned(),
         None => None,
-    };
-    dh_group.map(|dh_group| {
+    } {
         IKEv2::hello(vec![
-            Payload::SecurityAssociation(SecurityAssociation { proposals }),
-            Payload::KeyExchange(definitions::KeyExchange {
+            Payload::SecurityAssociation(SecurityAssociation { proposals: vec![] }),
+            Payload::KeyExchange(KeyExchange {
                 dh_group,
                 data: get_random_vec(dh_group.get_key_handshake_length()),
             }),
             Payload::Nonce(get_random_vec(16)),
         ])
-    })
+    } else {
+        return None;
+    };
+
+    let current_len = packet
+        .try_build()
+        .map_err(ScanError::GeneratorFailed)
+        .ok()?
+        .len();
+
+    while let Some(next) = proposals.pop() {
+        let serialized_proposal_len = next
+            .try_build(1, true)
+            .map_err(ScanError::GeneratorFailed)
+            .ok()?
+            .len();
+        if current_len + serialized_proposal_len <= MIN_SUPPORTED_MSG_SIZE {
+            for payload in packet.payloads.iter_mut() {
+                if let Payload::SecurityAssociation(sa) = payload {
+                    sa.proposals.push(next);
+                    break;
+                }
+            }
+        } else {
+            proposals.push(next);
+            break;
+        }
+    }
+    Some((packet, proposals))
 }
 
 fn count_proposals(packet: &IKEv2) -> usize {
