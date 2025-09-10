@@ -172,7 +172,7 @@ mod tests {
             Transform::Integrity(IntegrityAlgorithm::AES_256_GMAC),
             Transform::KeyExchange(KeyExchangeMethod::Curve_25519),
             Transform::KeyExchange(KeyExchangeMethod::Curve_448),
-            Transform::KeyExchange(KeyExchangeMethod::ModP_4096),
+            Transform::KeyExchange(KeyExchangeMethod::MODP_4096),
             Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_STREEBOG_512),
             Transform::PseudoRandomFunction(PseudorandomFunction::HMAC_SHA2_512),
         ]);

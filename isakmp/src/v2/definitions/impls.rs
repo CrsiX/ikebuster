@@ -158,20 +158,20 @@ impl KeyExchangeMethod {
     pub fn get_key_handshake_length(&self) -> usize {
         match self {
             KeyExchangeMethod::None => 0,
-            KeyExchangeMethod::ModP_768 => 96,
-            KeyExchangeMethod::ModP_1024 => 128,
-            KeyExchangeMethod::ModP_1536 => 192,
-            KeyExchangeMethod::ModP_2048 => 256,
-            KeyExchangeMethod::ModP_3072 => 384,
-            KeyExchangeMethod::ModP_4096 => 512,
-            KeyExchangeMethod::ModP_6144 => 768,
-            KeyExchangeMethod::ModP_8192 => 1024,
+            KeyExchangeMethod::MODP_768 => 96,
+            KeyExchangeMethod::MODP_1024 => 128,
+            KeyExchangeMethod::MODP_1536 => 192,
+            KeyExchangeMethod::MODP_2048 => 256,
+            KeyExchangeMethod::MODP_3072 => 384,
+            KeyExchangeMethod::MODP_4096 => 512,
+            KeyExchangeMethod::MODP_6144 => 768,
+            KeyExchangeMethod::MODP_8192 => 1024,
             KeyExchangeMethod::ECP_Random_256 => 64,
             KeyExchangeMethod::ECP_Random_384 => 96,
             KeyExchangeMethod::ECP_Random_521 => 132,
-            KeyExchangeMethod::ModP_1024_Prime_160 => 128, // unverified
-            KeyExchangeMethod::ModP_2048_Prime_224 => 256, // unverified
-            KeyExchangeMethod::ModP_2048_Prime_256 => 256, // unverified
+            KeyExchangeMethod::MODP_1024_Prime_160 => 128, // unverified
+            KeyExchangeMethod::MODP_2048_Prime_224 => 256, // unverified
+            KeyExchangeMethod::MODP_2048_Prime_256 => 256, // unverified
             KeyExchangeMethod::ECP_Random_192 => 48,
             KeyExchangeMethod::ECP_Random_224 => 56,
             KeyExchangeMethod::ECP_Brainpool_224 => 28, // unverified

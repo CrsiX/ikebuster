@@ -501,20 +501,20 @@ impl TryFrom<u16> for IntegrityAlgorithm {
 #[allow(non_camel_case_types, missing_docs)]
 pub enum KeyExchangeMethod {
     None = 0,
-    ModP_768 = 1, // deprecated
-    ModP_1024 = 2,
-    ModP_1536 = 5,
-    ModP_2048 = 14,
-    ModP_3072 = 15,
-    ModP_4096 = 16,
-    ModP_6144 = 17,
-    ModP_8192 = 18,
+    MODP_768 = 1, // deprecated
+    MODP_1024 = 2,
+    MODP_1536 = 5,
+    MODP_2048 = 14,
+    MODP_3072 = 15,
+    MODP_4096 = 16,
+    MODP_6144 = 17,
+    MODP_8192 = 18,
     ECP_Random_256 = 19,
     ECP_Random_384 = 20,
     ECP_Random_521 = 21,
-    ModP_1024_Prime_160 = 22, // deprecated
-    ModP_2048_Prime_224 = 23, // unsafe
-    ModP_2048_Prime_256 = 24, // unsafe
+    MODP_1024_Prime_160 = 22, // deprecated
+    MODP_2048_Prime_224 = 23, // unsafe
+    MODP_2048_Prime_256 = 24, // unsafe
     ECP_Random_192 = 25,
     ECP_Random_224 = 26,
     ECP_Brainpool_224 = 27,
@@ -536,22 +536,22 @@ impl TryFrom<u16> for KeyExchangeMethod {
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(KeyExchangeMethod::None),
-            1 => Ok(KeyExchangeMethod::ModP_768),
-            2 => Ok(KeyExchangeMethod::ModP_1024),
+            1 => Ok(KeyExchangeMethod::MODP_768),
+            2 => Ok(KeyExchangeMethod::MODP_1024),
             3..=4 => Err(UnparseableParameter::Reserved),
-            5 => Ok(KeyExchangeMethod::ModP_1536),
+            5 => Ok(KeyExchangeMethod::MODP_1536),
             6..=13 => Err(UnparseableParameter::Unassigned),
-            14 => Ok(KeyExchangeMethod::ModP_2048),
-            15 => Ok(KeyExchangeMethod::ModP_3072),
-            16 => Ok(KeyExchangeMethod::ModP_4096),
-            17 => Ok(KeyExchangeMethod::ModP_6144),
-            18 => Ok(KeyExchangeMethod::ModP_8192),
+            14 => Ok(KeyExchangeMethod::MODP_2048),
+            15 => Ok(KeyExchangeMethod::MODP_3072),
+            16 => Ok(KeyExchangeMethod::MODP_4096),
+            17 => Ok(KeyExchangeMethod::MODP_6144),
+            18 => Ok(KeyExchangeMethod::MODP_8192),
             19 => Ok(KeyExchangeMethod::ECP_Random_256),
             20 => Ok(KeyExchangeMethod::ECP_Random_384),
             21 => Ok(KeyExchangeMethod::ECP_Random_521),
-            22 => Ok(KeyExchangeMethod::ModP_1024_Prime_160),
-            23 => Ok(KeyExchangeMethod::ModP_2048_Prime_224),
-            24 => Ok(KeyExchangeMethod::ModP_2048_Prime_256),
+            22 => Ok(KeyExchangeMethod::MODP_1024_Prime_160),
+            23 => Ok(KeyExchangeMethod::MODP_2048_Prime_224),
+            24 => Ok(KeyExchangeMethod::MODP_2048_Prime_256),
             25 => Ok(KeyExchangeMethod::ECP_Random_192),
             26 => Ok(KeyExchangeMethod::ECP_Random_224),
             27 => Ok(KeyExchangeMethod::ECP_Brainpool_224),
