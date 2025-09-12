@@ -67,6 +67,12 @@ pub struct Open {
     /// List of sent [IKEv2] packets and the timestamp when they were sent; the ordering
     /// is not important and may be arbitrary due to retry and timeout logic.
     sent: Vec<(IKEv2, Instant)>,
+    /// List of [IKEv2] messages that should be deleted as they are half-open connections
+    /// on the remote side. A message will transition here if it was in `sent` when a
+    /// proposal was accepted by the IKE responder. Keeping track of accepted/rejected
+    /// proposals must happen before it is moved here; any packet in here should
+    /// only be used to delete the half-established SA.
+    half_open: Vec<HalfOpen>,
     /// List of packets that need to be retried to send; they may be modified (e.g. for Cookie
     /// payloads), and they also include other payloads (e.g. the Delete packet).
     retry: Vec<IKEv2>,
@@ -74,6 +80,13 @@ pub struct Open {
     /// verify them; the ordering is not important. Note that [Proposal]s in this list may
     /// have been sent to the responder already in a larger bulk but needed to be split up again.
     verify: Vec<Vec<Proposal>>,
+}
+
+#[derive(Debug)]
+pub(crate) struct HalfOpen {
+    initiator_cookie: u64,
+    responder_cookie: u64,
+    message_id: u32,
 }
 
 impl Results {

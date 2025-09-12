@@ -3,21 +3,69 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use isakmp::v2::definitions::constants::MIN_SUPPORTED_MSG_SIZE;
-use isakmp::v2::definitions::{IKEv2, KeyExchange, Payload, Proposal, SecurityAssociation};
+use isakmp::v2::definitions::params::ExchangeType;
+use isakmp::v2::definitions::{
+    Deletion, IKEv2, KeyExchange, Payload, Proposal, SecurityAssociation,
+};
 use tokio::net::UdpSocket;
-use tracing::{debug, error, instrument, warn};
+use tracing::{debug, error, instrument, trace, warn};
 
-use crate::v2::{Open, ScanOptionsV2, Statistics};
+use crate::v2::scanner::HOST_DEAD_TIMEOUT;
+use crate::v2::{HalfOpen, Open, ScanOptionsV2, Statistics, RECEIVE_TIMEOUT};
 use crate::ScanError;
 
 /// Maximum number of packets that should be kept in `open` state simultaneously
 const SENT_THRESHOLD: usize = 5;
 
+/// Handle sending any packet to the destination. This can be a new `SA_IKE_INIT` packet,
+/// but it could be also retrying an already sent packet or deleting a half-open connection.
+pub(crate) async fn handle_sending(
+    stats: &mut Statistics,
+    open: &mut Open,
+    todo: &mut VecDeque<Proposal>,
+    socket: &Arc<UdpSocket>,
+    options: &ScanOptionsV2,
+    last_received_packet: &Option<Instant>,
+) -> Result<(), ScanError> {
+    trace!(
+        sent = open.sent.len(),
+        retry = open.retry.len(),
+        verify = open.verify.len(),
+        todo = todo.len(),
+        "Sending packet"
+    );
+    if !handle_sending_hello(stats, open, todo, socket, options).await? {
+        debug!("Reached threshold for open connections, did not send new packets");
+        let now = Instant::now();
+        if open.sent.iter().all(|(_, i)| (now - *i) > RECEIVE_TIMEOUT) {
+            // If no packets were received and all sent packets timed out, the
+            // host is either dead or went into DoS protection and drops packets.
+            // DoS protection is likely not active at the very beginning of the
+            // program, thus it is likely that any response is received if there is
+            // an IKE responder on the other side.
+            if stats.recv_bytes == 0 {
+                error!("Timeout reached while waiting for incoming packets, does the host accept IKE connections?");
+                return Err(ScanError::Timeout(RECEIVE_TIMEOUT));
+            } else if last_received_packet.is_some_and(|i| Instant::now() - i > HOST_DEAD_TIMEOUT) {
+                error!("Timeout reached while waiting for incoming packets, the host likely died or disconnected.");
+                return Err(ScanError::Timeout(HOST_DEAD_TIMEOUT));
+            }
+            // Otherwise, if packets were received already and the last packet was
+            // received less than 30 minutes ago, we just keep retrying with some
+            // packet, while the retry list is already empty at this point.
+            if let Some((packet, _)) = open.sent.pop() {
+                send_packet(packet, socket, open, stats).await?;
+            }
+        };
+    };
+    Ok(())
+}
+
 /// Send IKEv2 `IKE_SA_INIT` messages, returning whether any packet was sent;
 /// it will first retry any packet that has already been sent at least once,
 /// and then check for proposal lists that need to be verified before
 /// trying new proposals that have not been attempted yet
-pub(crate) async fn handle_sending_hello(
+async fn handle_sending_hello(
     stats: &mut Statistics,
     open: &mut Open,
     todo: &mut VecDeque<Proposal>,
@@ -57,6 +105,33 @@ pub(crate) async fn handle_sending_hello(
     Ok(true)
 }
 
+/// Close a half-open connection. See section 1.4.1 of RFC 7296
+#[instrument(skip_all, fields(?half_open))]
+pub(crate) async fn close_half_open(
+    half_open: &HalfOpen,
+    socket: &Arc<UdpSocket>,
+    stats: &mut Statistics,
+) -> Result<(), ScanError> {
+    let packet = IKEv2 {
+        initiator_cookie: half_open.initiator_cookie,
+        responder_cookie: half_open.responder_cookie,
+        exchange_type: ExchangeType::Informational,
+        initiator: true,
+        response: false,
+        message_id: half_open.message_id,
+        payloads: vec![Payload::Delete(Deletion::InternetKeyExchange)],
+    };
+    let serialized_msg = packet.try_build().map_err(ScanError::GeneratorFailed)?;
+    let sent_bytes = socket.send(serialized_msg.as_slice()).await.map_err(|e| {
+        warn!(?packet, "Failed to send Delete message: {}", e);
+        stats.errors += 1;
+        ScanError::Send(e)
+    })?;
+    stats.sent_bytes += sent_bytes as u64;
+    stats.sent_packets += 1;
+    Ok(())
+}
+
 /// Send a single [IKEv2] packet and keep track of stats and open connections
 #[instrument(skip_all, fields(payloads = packet.payloads.len(), proposals = count_proposals(&packet)))]
 pub(crate) async fn send_packet(
@@ -70,7 +145,12 @@ pub(crate) async fn send_packet(
     let sent_bytes = match socket.send(serialized_msg.as_slice()).await {
         Ok(v) => v,
         Err(err) => {
-            warn!("Sending failed: {}: {:#?}", err.kind(), err);
+            warn!(
+                ?packet,
+                "Sending failed for IKE packet: {}: {:#?}",
+                err.kind(),
+                err
+            );
             // For ErrorKind::Uncategorized errors with error number 90, the MTU
             // along the path was lower than expected. If Path MTU Discovery is enabled,
             // this error signals that the sender should reduce the packet size.
@@ -84,6 +164,7 @@ pub(crate) async fn send_packet(
                         MTU Discovery. Retrying to send the packet once..."
                     );
                     let sent_bytes = socket.send(serialized_msg.as_slice()).await.map_err(|e| {
+                        stats.errors += 1;
                         error!("Failed to resend the packet after MTU discovery: {}", e);
                         ScanError::Send(e)
                     })?;
@@ -93,6 +174,7 @@ pub(crate) async fn send_packet(
                     return Ok(());
                 }
             }
+            stats.errors += 1;
             return Err(ScanError::Send(err));
         }
     };

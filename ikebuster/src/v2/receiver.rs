@@ -2,12 +2,12 @@ use isakmp::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage, S
 use isakmp::v2::definitions::{IKEv2, Notification, NotificationType, Payload, Proposal};
 use tracing::{debug, error, instrument, warn};
 
-use crate::v2::{Open, Results, Statistics};
+use crate::v2::{HalfOpen, Open, Results, Statistics};
 
 /// Max number of proposals in a `NO_PROPOSAL_CHOSEN` reply that are confirmed
 /// to be rejected by the responder; if more than this number of proposals was sent
 /// and got rejected, it should be split up and retried instead of counted as rejected
-pub const MAX_NO_PROPOSALS_CONFIRMED_LENGTH: usize = 6;
+pub const MAX_NO_PROPOSALS_CONFIRMED_LENGTH: usize = 10;
 
 #[instrument(skip_all)]
 pub(crate) fn handle_receiving(
@@ -113,7 +113,11 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
                     {
                         if p == *received_proposal {
                             results.accepted.push(p);
-                            // TODO: return a Delete payload
+                            open.half_open.push(HalfOpen {
+                                initiator_cookie: packet.initiator_cookie,
+                                responder_cookie: packet.responder_cookie,
+                                message_id: packet.message_id,
+                            });
                         } else {
                             todo.push(p);
                         }

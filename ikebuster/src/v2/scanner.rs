@@ -16,9 +16,8 @@ use tracing::{debug, error, info, trace};
 
 use crate::v2::gen_proposals::list_all_proposals;
 use crate::v2::receiver::handle_receiving;
-use crate::v2::sender::{handle_sending_hello, send_packet};
+use crate::v2::sender::{close_half_open, handle_sending};
 use crate::v2::serialization::ScannerSerialization;
-use crate::v2::RECEIVE_TIMEOUT;
 use crate::v2::{Open, Results, ScanOptionsV2, Statistics};
 use crate::ScanError;
 
@@ -77,42 +76,31 @@ async fn scan(
                 }
             }
 
-            // Send a new packet to the destination
+            // Send a new packet to the destination, which may be a SA_IKE_INIT, or a
+            // NOTIFICATION to delete an existing SA, depending on the current state
             _ = sending_interval.tick() => {
+                if let Some(half_open) = open.half_open.pop() {
+                    debug!("HalfOpen: {:#?}", half_open);
+                    close_half_open(&half_open, &socket, &mut stats).await?;
+                    continue;
+                }
                 if open.sent.is_empty()
                     && open.retry.is_empty()
                     && open.verify.is_empty()
                     && last_received_packet.is_some()
                     && todo.is_empty()
                 {
-                    debug!("Search completed");
+                    info!("Search completed");
                     break;
                 }
-                trace!(sent = open.sent.len(), retry = open.retry.len(), verify = open.verify.len(), todo = todo.len(), "Sending packet");
-                if !handle_sending_hello(&mut stats, &mut open, &mut todo, &socket, &options).await? {
-                    debug!("Reached threshold for open connections, did not send new packets");
-                    let now = Instant::now();
-                    if open.sent.iter().all(|(_, i)| (now - *i) > RECEIVE_TIMEOUT) {
-                        // If no packets were received and all sent packets timed out, the
-                        // host is either dead or went into DoS protection and drops packets.
-                        // DoS protection is likely not active at the very beginning of the
-                        // program, thus it is likely that any response is received if there is
-                        // an IKE responder on the other side.
-                        if stats.recv_bytes == 0 {
-                            error!("Timeout reached while waiting for incoming packets, does the host accept IKE connections?");
-                            return Err(ScanError::Timeout(RECEIVE_TIMEOUT))
-                        } else if last_received_packet.is_some_and(|i| Instant::now() - i > HOST_DEAD_TIMEOUT) {
-                            error!("Timeout reached while waiting for incoming packets, the host likely died or disconnected.");
-                            return Err(ScanError::Timeout(HOST_DEAD_TIMEOUT))
-                        }
-                        // Otherwise, if packets were received already and the last packet was
-                        // received less than 30 minutes ago, we just keep retrying with some
-                        // packet, while the retry list is already empty at this point.
-                        if let Some((packet, _)) = open.sent.pop() {
-                            send_packet(packet, &socket, &mut open, &mut stats).await?;
-                        }
-                    };
-                };
+                handle_sending(
+                    &mut stats,
+                    &mut open,
+                    &mut todo,
+                    &socket,
+                    &options,
+                    &last_received_packet
+                ).await?;
             }
 
             // Control channel functionality
