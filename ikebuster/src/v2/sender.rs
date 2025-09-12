@@ -3,15 +3,11 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use isakmp::v2::definitions::constants::MIN_SUPPORTED_MSG_SIZE;
-use isakmp::v2::definitions::params::ExchangeType;
-use isakmp::v2::definitions::{
-    Deletion, IKEv2, KeyExchange, Payload, Proposal, SecurityAssociation,
-};
+use isakmp::v2::definitions::{IKEv2, KeyExchange, Payload, Proposal, SecurityAssociation};
 use tokio::net::UdpSocket;
 use tracing::{debug, error, instrument, trace, warn};
 
-use crate::v2::scanner::HOST_DEAD_TIMEOUT;
-use crate::v2::{HalfOpen, Open, ScanOptionsV2, Statistics, RECEIVE_TIMEOUT};
+use crate::v2::{Open, ScanOptionsV2, Statistics, HOST_DEAD_TIMEOUT, RECEIVE_TIMEOUT};
 use crate::ScanError;
 
 /// Maximum number of packets that should be kept in `open` state simultaneously
@@ -105,33 +101,6 @@ async fn handle_sending_hello(
     Ok(true)
 }
 
-/// Close a half-open connection. See section 1.4.1 of RFC 7296
-#[instrument(skip_all, fields(?half_open))]
-pub(crate) async fn close_half_open(
-    half_open: &HalfOpen,
-    socket: &Arc<UdpSocket>,
-    stats: &mut Statistics,
-) -> Result<(), ScanError> {
-    let packet = IKEv2 {
-        initiator_cookie: half_open.initiator_cookie,
-        responder_cookie: half_open.responder_cookie,
-        exchange_type: ExchangeType::Informational,
-        initiator: true,
-        response: false,
-        message_id: half_open.message_id,
-        payloads: vec![Payload::Delete(Deletion::InternetKeyExchange)],
-    };
-    let serialized_msg = packet.try_build().map_err(ScanError::GeneratorFailed)?;
-    let sent_bytes = socket.send(serialized_msg.as_slice()).await.map_err(|e| {
-        warn!(?packet, "Failed to send Delete message: {}", e);
-        stats.errors += 1;
-        ScanError::Send(e)
-    })?;
-    stats.sent_bytes += sent_bytes as u64;
-    stats.sent_packets += 1;
-    Ok(())
-}
-
 /// Send a single [IKEv2] packet and keep track of stats and open connections
 #[instrument(skip_all, fields(payloads = packet.payloads.len(), proposals = count_proposals(&packet)))]
 pub(crate) async fn send_packet(
@@ -187,19 +156,18 @@ pub(crate) async fn send_packet(
 /// Construct a new hello packet from a list of proposals that should be used in the
 /// SA of that packet, returning the packet and all unused proposals on success.
 /// Proposals may not all be used if the packet would grow too large if they were added.
-fn make_new_hello_packet(mut proposals: Vec<Proposal>) -> Option<(IKEv2, Vec<Proposal>)> {
-    let mut used_proposals = vec![];
-    if let Some(p) = proposals.pop() {
-        used_proposals.push(p);
-    } else {
-        return None;
-    }
-    let mut packet = if let Some(dh_group) = match used_proposals.first() {
+pub(crate) fn make_new_hello_packet(
+    mut proposals: Vec<Proposal>,
+) -> Option<(IKEv2, Vec<Proposal>)> {
+    let first_proposal = proposals.pop();
+    let mut packet = if let Some(dh_group) = match &first_proposal {
         Some(first) => first.key_exchange_methods.first().cloned(),
         None => None,
     } {
         IKEv2::hello(vec![
-            Payload::SecurityAssociation(SecurityAssociation { proposals: vec![] }),
+            Payload::SecurityAssociation(SecurityAssociation {
+                proposals: vec![first_proposal.expect("first proposal must exist to get here")],
+            }),
             Payload::KeyExchange(KeyExchange {
                 dh_group,
                 data: get_random_vec(dh_group.get_key_handshake_length()),

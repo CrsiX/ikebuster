@@ -12,13 +12,14 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tokio::task::{JoinError, JoinHandle};
 use tokio::time::{interval, MissedTickBehavior};
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::v2::gen_proposals::list_all_proposals;
+use crate::v2::peeking::peek;
 use crate::v2::receiver::handle_receiving;
-use crate::v2::sender::{close_half_open, handle_sending};
+use crate::v2::sender::handle_sending;
 use crate::v2::serialization::ScannerSerialization;
-use crate::v2::{Open, Results, ScanOptionsV2, Statistics};
+use crate::v2::{Open, Results, ScanOptionsV2, Statistics, MAX_DATAGRAM_SIZE, RECEIVE_TIMEOUT};
 use crate::ScanError;
 
 #[derive(Debug)]
@@ -29,9 +30,6 @@ enum ControlChannelEvent {
     Progress(oneshot::Sender<f64>),
     Remaining(oneshot::Sender<usize>),
 }
-
-/// Timeout when a host that was alive before stopped sending over 30 minutes ago
-pub const HOST_DEAD_TIMEOUT: Duration = Duration::from_secs(1800); // 30 minutes
 
 /// Perform the actual scan of the target for all possible proposals.
 /// This should be executed in a tokio task. Use the control socket for interaction.
@@ -55,9 +53,7 @@ async fn scan(
     let mut open = Open::default();
     let mut last_received_packet = None;
 
-    const MAX_DATAGRAM_SIZE: usize = 65_507;
     let mut recv_buffer = [0u8; MAX_DATAGRAM_SIZE];
-
     loop {
         select! {
             // Receive and parse any incoming packet
@@ -67,7 +63,7 @@ async fn scan(
                         trace!("Received bytes: {:#?}", &recv_buffer[..recv_bytes]);
                         last_received_packet = Some(Instant::now());
                         stats.recv_bytes += recv_bytes as u64;
-                        handle_receiving(&mut stats, &mut open, &mut results, &recv_buffer[..recv_bytes]);
+                        handle_receiving(&mut stats, &mut open, &mut results, &recv_buffer[..recv_bytes])?;
                     }
                     Err(e) => {
                         error!("Failed to read bytes from socket: {e}");
@@ -76,18 +72,12 @@ async fn scan(
                 }
             }
 
-            // Send a new packet to the destination, which may be a SA_IKE_INIT, or a
-            // NOTIFICATION to delete an existing SA, depending on the current state
+            // Send a new packet to the destination, which may be a new SA_IKE_INIT
+            // or a retry to an already sent packet
             _ = sending_interval.tick() => {
-                if let Some(half_open) = open.half_open.pop() {
-                    debug!("HalfOpen: {:#?}", half_open);
-                    close_half_open(&half_open, &socket, &mut stats).await?;
-                    continue;
-                }
                 if open.sent.is_empty()
                     && open.retry.is_empty()
                     && open.verify.is_empty()
-                    && last_received_packet.is_some()
                     && todo.is_empty()
                 {
                     info!("Search completed");
@@ -272,6 +262,19 @@ pub async fn start_scan(options: &ScanOptionsV2) -> Result<ScanV2Handler, ScanEr
         socket.local_addr().map_err(ScanError::CouldNotBind)?
     );
     socket.connect(&addr).await.map_err(ScanError::Receive)?;
+
+    if options.enable_peek {
+        debug!("Peeking with a blown-up IKEv2 message...");
+        match tokio::time::timeout(RECEIVE_TIMEOUT, peek(&socket)).await {
+            Ok(v) => match v {
+                Ok(s) => {}
+                Err(e) => return Err(e),
+            },
+            Err(e) => {
+                warn!("Peek failed with timeout (is the host alive?): {}", e);
+            }
+        };
+    }
 
     let (tx, rx) = mpsc::channel(1);
     Ok(ScanV2Handler {

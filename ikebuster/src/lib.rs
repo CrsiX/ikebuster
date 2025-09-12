@@ -235,4 +235,6 @@ pub enum ScanError {
     GeneratorFailed(isakmp::v2::generator::GeneratorError),
     #[error("Timeout while sending/receiving data: {0:#?}")]
     Timeout(Duration),
+    #[error("Destination is not capable of speaking IKEv2: {0}")]
+    IKEv2NotSupported(String),
 }

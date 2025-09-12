@@ -7,6 +7,7 @@ use serde::Serialize;
 
 pub mod finding;
 pub mod gen_proposals;
+mod peeking;
 pub(crate) mod receiver;
 pub mod scanner;
 pub(crate) mod sender;
@@ -14,6 +15,12 @@ pub mod serialization;
 
 /// Timeout for receiving any data from the remote side
 pub const RECEIVE_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Timeout when a host that was alive before stopped sending over 30 minutes ago
+pub const HOST_DEAD_TIMEOUT: Duration = Duration::from_secs(1800); // 30 minutes
+
+/// Max size of a single UDP packet that we can support
+pub const MAX_DATAGRAM_SIZE: usize = 65_507;
 
 /// Options to "configure" the scanner v2
 #[derive(Debug, Clone)]
@@ -30,6 +37,8 @@ pub struct ScanOptionsV2 {
     pub transform_no: usize,
     /// Optional save file to store scanner state in JSON
     pub json_state: Option<String>,
+    /// Enable peeking with a single packet before the actual scan
+    pub enable_peek: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -67,12 +76,6 @@ pub struct Open {
     /// List of sent [IKEv2] packets and the timestamp when they were sent; the ordering
     /// is not important and may be arbitrary due to retry and timeout logic.
     sent: Vec<(IKEv2, Instant)>,
-    /// List of [IKEv2] messages that should be deleted as they are half-open connections
-    /// on the remote side. A message will transition here if it was in `sent` when a
-    /// proposal was accepted by the IKE responder. Keeping track of accepted/rejected
-    /// proposals must happen before it is moved here; any packet in here should
-    /// only be used to delete the half-established SA.
-    half_open: Vec<HalfOpen>,
     /// List of packets that need to be retried to send; they may be modified (e.g. for Cookie
     /// payloads), and they also include other payloads (e.g. the Delete packet).
     retry: Vec<IKEv2>,
@@ -80,13 +83,6 @@ pub struct Open {
     /// verify them; the ordering is not important. Note that [Proposal]s in this list may
     /// have been sent to the responder already in a larger bulk but needed to be split up again.
     verify: Vec<Vec<Proposal>>,
-}
-
-#[derive(Debug)]
-pub(crate) struct HalfOpen {
-    initiator_cookie: u64,
-    responder_cookie: u64,
-    message_id: u32,
 }
 
 impl Results {

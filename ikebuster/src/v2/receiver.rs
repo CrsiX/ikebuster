@@ -2,7 +2,8 @@ use isakmp::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage, S
 use isakmp::v2::definitions::{IKEv2, Notification, NotificationType, Payload, Proposal};
 use tracing::{debug, error, instrument, warn};
 
-use crate::v2::{HalfOpen, Open, Results, Statistics};
+use crate::v2::{Open, Results, Statistics};
+use crate::ScanError;
 
 /// Max number of proposals in a `NO_PROPOSAL_CHOSEN` reply that are confirmed
 /// to be rejected by the responder; if more than this number of proposals was sent
@@ -15,10 +16,10 @@ pub(crate) fn handle_receiving(
     open: &mut Open,
     results: &mut Results,
     raw_rx: &[u8],
-) {
+) -> Result<(), ScanError> {
     match IKEv2::try_parse(raw_rx) {
         Ok(packet) => {
-            handle_packet(packet, stats, open, results);
+            handle_packet(packet, stats, open, results)?;
             stats.recv_packets += 1;
         }
         Err(err) => {
@@ -27,17 +28,23 @@ pub(crate) fn handle_receiving(
             stats.errors += 1;
         }
     }
+    Ok(())
 }
 
 /// Handle an [IKEv2] packet including updates to the statistics
-fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results: &mut Results) {
+fn handle_packet(
+    packet: IKEv2,
+    stats: &mut Statistics,
+    open: &mut Open,
+    results: &mut Results,
+) -> Result<(), ScanError> {
     if !packet.response || packet.initiator {
         error!(
             packet = ?packet,
             "Received IKEv2 packet with response or initiator flags set, refusing to parse!"
         );
         stats.errors += 1;
-        return;
+        return Ok(());
     }
 
     let tracked_packet_index = match open
@@ -52,7 +59,7 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
                 "Received IKEv2 packet with unknown initiator SPI not tracked in `open` connections!"
             );
             stats.errors += 1;
-            return;
+            return Ok(());
         }
     };
 
@@ -61,11 +68,16 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
         if let Payload::Notify(n) = payload {
             match n.variant {
                 NotificationType::Error(e) => match e {
+                    NotifyErrorMessage::InvalidMajorVersion => {
+                        error!("Destination is not capable of speaking IKEv2: {}", e);
+                        return Err(ScanError::IKEv2NotSupported(e.to_string()));
+                    }
                     NotifyErrorMessage::NoProposalChosen
                     | NotifyErrorMessage::InvalidSyntax
                     | NotifyErrorMessage::InvalidKeyExchangePayload => {
                         let (open_packet, _) = open.sent.swap_remove(tracked_packet_index);
-                        return handle_unsuccessful_responses(open_packet, open, stats, results, e);
+                        handle_unsuccessful_responses(open_packet, open, stats, results, e);
+                        return Ok(());
                     }
                     _ => {
                         warn!(packet = ?packet, "Unexpected error notification: {:?}", n);
@@ -76,13 +88,14 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
                         NotifyStatusMessage::Cookie => {
                             let (open_packet, _) = open.sent.swap_remove(tracked_packet_index);
                             if handle_dos_cookie(open_packet, open, n) {
-                                return;
+                                return Ok(());
                             };
                         }
                         // Simply ignore various status messages we are not interested in
                         NotifyStatusMessage::MultipleAuthSupported
                         | NotifyStatusMessage::NatDetectionSourceIp
                         | NotifyStatusMessage::NatDetectionDestinationIp
+                        | NotifyStatusMessage::Ikev2FragmentationSupported
                         | NotifyStatusMessage::ChildlessIkev2Supported => {}
                         _ => {
                             warn!("Unexpected status notification: {:?}", n)
@@ -113,11 +126,6 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
                     {
                         if p == *received_proposal {
                             results.accepted.push(p);
-                            open.half_open.push(HalfOpen {
-                                initiator_cookie: packet.initiator_cookie,
-                                responder_cookie: packet.responder_cookie,
-                                message_id: packet.message_id,
-                            });
                         } else {
                             todo.push(p);
                         }
@@ -139,6 +147,7 @@ fn handle_packet(packet: IKEv2, stats: &mut Statistics, open: &mut Open, results
             _ => {}
         }
     }
+    Ok(())
 }
 
 /// Handle responses that are neither DoS cookies nor successfully established SAs
