@@ -53,6 +53,27 @@ pub(crate) async fn handle_sending(
                 send_packet(packet, socket, open, stats).await?;
             }
         };
+    } else {
+        // If a packet was lost but the sender threshold not reached, we need to detect the packet
+        // timeout. Detecting a single lost packet is sufficient, since this part will be called
+        // in a loop, and it will add at most one packet per iteration of that loop anyway.
+        let now = Instant::now();
+        if let Some(last_lost_index) = open
+            .sent
+            .iter()
+            .enumerate()
+            .filter_map(|(i, (_, instant))| {
+                if (now - *instant) > RECEIVE_TIMEOUT {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .next_back()
+        {
+            let (packet, _) = open.sent.swap_remove(last_lost_index);
+            send_packet(packet, socket, open, stats).await?;
+        };
     };
     Ok(())
 }
