@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use clap::ArgAction;
 use clap::Parser;
-use ikebuster::v2::finding::FindingResult;
+use ikebuster::v2::finding::{Finding, FindingResult};
 use ikebuster::v2::{ScanOptionsV2, ScanResultOutputFormat};
 use ikebuster::ScanOptions;
 use ikebuster::{v2, ScanError};
@@ -88,6 +88,11 @@ pub struct Cli {
     #[clap(long, default_value_t = 45)]
     pub sleep_on_transform_found: u64,
 
+    /// Do not peek before the scan to check the remote host, i.e. send a single packet
+    /// with many transforms first
+    #[clap(long, action)]
+    pub no_peeking: bool,
+
     /// Set the verbosity of the output
     #[clap(short, long, action = ArgAction::Count)]
     pub verbose: u8,
@@ -111,6 +116,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         interval: cli.interval,
         transform_no: cli.transforms,
         json_state: cli.json_state.clone(),
+        enable_peeking: !cli.no_peeking,
     };
 
     let now = std::time::Instant::now();
@@ -203,7 +209,11 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
             statistics,
             rejected: results.rejected.len(),
             invalid_syntax: results.invalid_syntax.len(),
-            accepted: results.accepted,
+            accepted: results
+                .accepted
+                .iter()
+                .filter_map(|p| Finding::from_proposal(p, FindingResult::Accepted))
+                .collect(),
             vendor_ids: results.vendor_ids,
         })?;
         let _ = file.write(content.as_bytes())?;

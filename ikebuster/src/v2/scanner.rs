@@ -263,7 +263,7 @@ pub async fn start_scan(options: &ScanOptionsV2) -> Result<ScanV2Handler, ScanEr
     );
     socket.connect(&addr).await.map_err(ScanError::Receive)?;
 
-    if options.enable_peek {
+    if options.enable_peeking {
         debug!("Peeking with a blown-up IKEv2 message...");
         match tokio::time::timeout(RECEIVE_TIMEOUT, peek(&socket)).await {
             Ok(v) => match v {

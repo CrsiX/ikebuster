@@ -4,15 +4,17 @@ use isakmp::strum::Display;
 use isakmp::v2::definitions::params::{
     EncryptionAlgorithm, IntegrityAlgorithm, KeyExchangeMethod, PseudorandomFunction,
 };
+use isakmp::v2::definitions::Proposal;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Display, PartialEq)]
+#[derive(Debug, Clone, Display, PartialEq, Serialize, Deserialize)]
 pub enum FindingResult {
     Accepted,
     InvalidSyntax,
     Rejected,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Finding {
     pub encryption: EncryptionAlgorithm,
     pub key_size: Option<u16>,
@@ -50,4 +52,31 @@ pub fn format_to_csv(findings: &Vec<Finding>) -> Result<String, std::fmt::Error>
         ))?
     }
     Ok(result)
+}
+
+impl Finding {
+    /// Create a [Finding] from a [Proposal] and the result of the proposal scan
+    ///
+    /// Note that this finding only uses the very first of each of the proposal's
+    /// values. If the proposal contains multiple transforms for a single
+    /// transform type, only the first will be used. If a mandatory transform
+    /// is omitted, `None` will be returned.
+    pub fn from_proposal(proposal: &Proposal, result: FindingResult) -> Option<Self> {
+        if let Some((encryption, key_size)) = proposal.encryption_algorithms.first() {
+            if let Some(kex) = proposal.key_exchange_methods.first() {
+                if let Some(prf) = proposal.pseudo_random_functions.first() {
+                    return Some(Finding {
+                        encryption: *encryption,
+                        key_size: *key_size,
+                        is_aead: encryption.is_aead_cipher(),
+                        prf: *prf,
+                        integrity: proposal.integrity_algorithms.first().copied(),
+                        kex: *kex,
+                        result,
+                    });
+                }
+            }
+        }
+        None
+    }
 }

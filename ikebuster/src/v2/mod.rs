@@ -1,9 +1,10 @@
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
-use crate::v2::finding::{Finding, FindingResult};
 use isakmp::v2::definitions::{IKEv2, Proposal};
 use serde::Serialize;
+
+use crate::v2::finding::{Finding, FindingResult};
 
 pub mod finding;
 pub mod gen_proposals;
@@ -38,7 +39,7 @@ pub struct ScanOptionsV2 {
     /// Optional save file to store scanner state in JSON
     pub json_state: Option<String>,
     /// Enable peeking with a single packet before the actual scan
-    pub enable_peek: bool,
+    pub enable_peeking: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -49,7 +50,7 @@ pub struct ScanResultOutputFormat {
     pub statistics: Statistics,
     pub rejected: usize,
     pub invalid_syntax: usize,
-    pub accepted: Vec<Proposal>,
+    pub accepted: Vec<Finding>,
     pub vendor_ids: Vec<Vec<u8>>,
 }
 
@@ -90,32 +91,20 @@ impl Results {
     pub fn to_findings(&self) -> Vec<Finding> {
         let mut findings = vec![];
 
-        #[inline]
-        fn to_finding(proposal: &Proposal, result: FindingResult) -> Finding {
-            Finding {
-                encryption: proposal.encryption_algorithms.get(0).unwrap().0,
-                key_size: proposal.encryption_algorithms.get(0).unwrap().1,
-                is_aead: proposal
-                    .encryption_algorithms
-                    .get(0)
-                    .unwrap()
-                    .0
-                    .is_aead_cipher(),
-                prf: proposal.pseudo_random_functions.get(0).unwrap().clone(),
-                integrity: proposal.integrity_algorithms.first().cloned(),
-                kex: proposal.key_exchange_methods.first().cloned().unwrap(),
-                result,
+        for i in self.accepted.iter() {
+            if let Some(f) = Finding::from_proposal(i, FindingResult::Accepted) {
+                findings.push(f);
             }
         }
-
-        for i in self.accepted.iter() {
-            findings.push(to_finding(i, FindingResult::Accepted));
-        }
         for i in self.rejected.iter() {
-            findings.push(to_finding(i, FindingResult::Rejected));
+            if let Some(f) = Finding::from_proposal(i, FindingResult::Rejected) {
+                findings.push(f);
+            }
         }
         for i in self.invalid_syntax.iter() {
-            findings.push(to_finding(i, FindingResult::InvalidSyntax));
+            if let Some(f) = Finding::from_proposal(i, FindingResult::InvalidSyntax) {
+                findings.push(f);
+            }
         }
 
         findings
