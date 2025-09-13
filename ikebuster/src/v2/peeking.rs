@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use isakmp::v2::definitions::params::{
     EncryptionAlgorithm, IntegrityAlgorithm, KeyExchangeMethod, NotifyErrorMessage,
     PseudorandomFunction, SecurityProtocol,
@@ -18,7 +16,7 @@ use crate::ScanError;
 /// but if this returns `false` then the scan might not produce any results.
 /// Note that this should be done at the start of the scan, because it can quickly
 /// determine if a host is dead or does not support [IKEv2] at all.
-pub(crate) async fn peek(socket: &Arc<UdpSocket>) -> Result<bool, ScanError> {
+pub(crate) async fn peek(socket: &UdpSocket) -> Result<bool, ScanError> {
     // These two proposals list a lot of transformations that are seen often
     // and therefore are likely to be accepted by a responder that is
     // willing to negotiate using the standard ciphers.

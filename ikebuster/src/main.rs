@@ -386,9 +386,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         ScanMode::Autodetect => {
-            // TODO: Implement autodetection mode
-            println!("Unsupported scan mode.");
-            exit(2);
+            owo_println!("Trying to autodetect the IKE version supported by the destination...");
         }
     }
 

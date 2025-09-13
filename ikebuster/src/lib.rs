@@ -60,22 +60,32 @@ pub struct ScanOptions {
     pub sleep_on_transform_found: Duration,
 }
 
-/// Scan the provided ip address
+pub(crate) async fn bind(
+    addr: IpAddr,
+    remote_port: u16,
+    listen_port: u16,
+) -> Result<UdpSocket, ScanError> {
+    let addr = SocketAddr::new(addr, remote_port);
+    let socket = match addr.ip() {
+        IpAddr::V4(_) => UdpSocket::bind(("0.0.0.0", listen_port))
+            .await
+            .map_err(ScanError::CouldNotBind)?,
+        IpAddr::V6(_) => UdpSocket::bind(("[::]", listen_port))
+            .await
+            .map_err(ScanError::CouldNotBind)?,
+    };
+    info!(
+        "Bound to {}",
+        socket.local_addr().map_err(ScanError::CouldNotBind)?
+    );
+    socket.connect(&addr).await.map_err(ScanError::Receive)?;
+    Ok(socket)
+}
+
+/// Scan the provided ip address using IKEv1
 #[instrument(skip_all)]
 pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
-    // Initialize udp socket
-    let addr = SocketAddr::new(opts.ip, opts.port);
-
-    info!("Binding and starting to scan {addr}");
-    let socket = Arc::new(match addr.ip() {
-        IpAddr::V4(_) => UdpSocket::bind("0.0.0.0:500")
-            .await
-            .map_err(ScanError::CouldNotBind)?,
-        IpAddr::V6(_) => UdpSocket::bind("[::]:500")
-            .await
-            .map_err(ScanError::CouldNotBind)?,
-    });
-    socket.connect(&addr).await.map_err(ScanError::Receive)?;
+    let socket = Arc::new(bind(opts.ip, opts.port, 500).await?);
 
     let (tx, mut rx) = mpsc::unbounded_channel();
     let mut interval = interval(Duration::from_millis(opts.interval));

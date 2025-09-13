@@ -20,7 +20,7 @@ use crate::v2::receiver::handle_receiving;
 use crate::v2::sender::handle_sending;
 use crate::v2::serialization::ScannerSerialization;
 use crate::v2::{Open, Results, ScanOptionsV2, Statistics, MAX_DATAGRAM_SIZE, RECEIVE_TIMEOUT};
-use crate::ScanError;
+use crate::{bind, ScanError};
 
 #[derive(Debug)]
 enum ControlChannelEvent {
@@ -246,22 +246,7 @@ impl ScanV2Handler {
 
 /// Start the IKEv2 scan using the provided scan options, returning a handle to the running scan immediately
 pub async fn start_scan(options: &ScanOptionsV2) -> Result<ScanV2Handler, ScanError> {
-    let addr = SocketAddr::new(options.ip, options.port);
-    info!("Binding and starting to scan {addr}");
-
-    let socket = Arc::new(match addr.ip() {
-        IpAddr::V4(_) => UdpSocket::bind(("0.0.0.0", options.listen_port))
-            .await
-            .map_err(ScanError::CouldNotBind)?,
-        IpAddr::V6(_) => UdpSocket::bind(("[::]", options.listen_port))
-            .await
-            .map_err(ScanError::CouldNotBind)?,
-    });
-    info!(
-        "Bound to {}",
-        socket.local_addr().map_err(ScanError::CouldNotBind)?
-    );
-    socket.connect(&addr).await.map_err(ScanError::Receive)?;
+    let socket = Arc::new(bind(options.ip, options.port, options.listen_port).await?);
 
     if options.enable_peeking {
         debug!("Peeking with a blown-up IKEv2 message...");
