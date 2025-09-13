@@ -1,3 +1,5 @@
+//! Module for [Finding]s and related utils
+
 use std::fmt::Write;
 
 use isakmp::strum::Display;
@@ -7,24 +9,39 @@ use isakmp::v2::definitions::params::{
 use isakmp::v2::definitions::Proposal;
 use serde::{Deserialize, Serialize};
 
+/// State of a finding, i.e. whether the proposal was accepted by the target or not
 #[derive(Debug, Clone, Display, PartialEq, Serialize, Deserialize)]
 pub enum FindingResult {
+    /// The proposal was accepted
     Accepted,
+    /// The proposal was not understood
     InvalidSyntax,
+    /// The proposal was rejected
     Rejected,
 }
 
+/// Fully populated test result for a single proposal made up of encryption algorithm,
+/// PRF algorithm, key exchange method and optional key size and integrity function
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Finding {
+    /// Symmetric encryption algorithm
     pub encryption: EncryptionAlgorithm,
+    /// Optional accepted key length for the symmetric encryption algorithm
     pub key_size: Option<u16>,
+    /// Indicator whether the encryption algorithm is an AEAD,
+    /// i.e. does not require an explicit integrity algorithm
     pub is_aead: bool,
+    /// Pseudo-random function (aka hash function)
     pub prf: PseudorandomFunction,
+    /// Optional integrity function of the proposal
     pub integrity: Option<IntegrityAlgorithm>,
+    /// Key exchange method for the Diffie-Hellman key exchange
     pub kex: KeyExchangeMethod,
+    /// Result of the check of the proposal
     pub result: FindingResult,
 }
 
+/// Convert a list of [Finding]s into a CSV-like format with its own heading line (columns name row)
 pub fn format_to_csv(findings: &[Finding]) -> Result<String, std::fmt::Error> {
     let mut result =
         "\"number\";\"encryption\";\"key_size\";\"is_aead\";\"prf\";\"integrity\";\"key_exchange\";\"result\"\n"

@@ -1,6 +1,5 @@
 //! Module containing network level header structs for pieces of the protocol
 
-use super::params::{KeyExchangeMethod, SecurityProtocol, TransformType};
 use crate::v2::definitions::constants::FLAG_ATTRIBUTE_FORMAT;
 use zerocopy::network_endian::U16;
 use zerocopy::{AsBytes, FromBytes, FromZeroes, Unaligned};
@@ -169,6 +168,8 @@ pub struct KeyExchangeHeader {
 #[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned, Copy, Clone)]
 #[repr(C, packed)]
 pub struct CertificateHeader {
+    /// Definition of the encoded data following the header,
+    /// see [CertificateEncoding](super::params::CertificateEncoding)
     pub encoding: u8,
 }
 

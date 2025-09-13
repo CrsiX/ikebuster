@@ -6,7 +6,7 @@ use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
 
 impl KeyExchange {
-    pub fn build(&self, next_payload: PayloadType) -> Vec<u8> {
+    pub(crate) fn build(&self, next_payload: PayloadType) -> Vec<u8> {
         let generic_header = GenericPayloadHeader {
             next_payload: next_payload as u8,
             reserved: 0,

@@ -125,6 +125,7 @@ pub enum Payload {
 /// will have all the combined-mode ciphers, and the other will have all
 /// the normal ciphers with the integrity algorithms.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[allow(missing_docs)]
 pub struct SecurityAssociation {
     pub proposals: Vec<Proposal>,
 }
@@ -150,16 +151,25 @@ pub struct Proposal {
     /// for scanning and not needed to be duplicated from the [SecurityAssociation]
     pub spi: Vec<u8>,
 
+    /// List of encryption algorithms and optional key length that should be proposed;
+    /// mixing AEAD and non-AEAD encryption algorithms in a single proposal is illegal
     pub encryption_algorithms: Vec<(EncryptionAlgorithm, Option<u16>)>,
+    /// List of PRF (pseudo-random function) algorithms that should be proposed
     pub pseudo_random_functions: Vec<PseudorandomFunction>,
+    /// List of integrity algorithms (aka MAC) that should be proposed;
+    /// note that integrity algorithms are optional if the encryption algorithms are
+    /// AEADs, and mandatory otherwise
     pub integrity_algorithms: Vec<IntegrityAlgorithm>,
+    /// Key exchange methods (aka DH groups) that should be proposed
     pub key_exchange_methods: Vec<KeyExchangeMethod>,
+    /// Sequence numbers used in this proposal, only valid for non-IKE protocols
     pub sequence_numbers: Vec<SequenceNumberType>,
 }
 
 /// High-level representation of a transformation and all required additional
 /// information that is dynamically built from incoming packets. See [TransformType].
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[allow(missing_docs)]
 pub enum Transform {
     Encryption(EncryptionAlgorithm, Option<u16>),
     PseudoRandomFunction(PseudorandomFunction),
@@ -177,7 +187,9 @@ pub(crate) enum Attribute {
 /// High-level representation of a Key Exchange
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyExchange {
+    /// Indicator which key exchange method is used in the following `data` field
     pub dh_group: KeyExchangeMethod,
+    /// Raw data of the key exchange, where the structure is defined by the DH group
     pub data: Vec<u8>,
 }
 
@@ -200,7 +212,10 @@ pub struct Notification {
     pub spi: Option<Vec<u8>>,
 }
 
+/// Variant of a notification defining the structure of the arbitrary
+/// data in the `data` field of the [Notification]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[allow(missing_docs)]
 pub enum NotificationType {
     Error(NotifyErrorMessage),
     Status(NotifyStatusMessage),
@@ -209,7 +224,10 @@ pub enum NotificationType {
 /// High-level representation of a Deletion (Delete payload)
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Deletion {
+    /// Delete the IKE SA itself
     InternetKeyExchange,
+    /// Delete a list of AH SPIs
     AuthenticationHeader(Vec<u32>),
+    /// Delete a list of ESP SPIs
     EncapsulatingSecurityPayload(Vec<u32>),
 }

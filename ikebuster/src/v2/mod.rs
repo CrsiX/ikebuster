@@ -1,3 +1,5 @@
+//! Implementation of the new IKEv2 scanner, and related utilities
+
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
@@ -8,17 +10,17 @@ use crate::v2::finding::{Finding, FindingResult};
 
 pub mod finding;
 pub mod gen_proposals;
-pub mod peeking;
+pub(crate) mod peeking;
 pub(crate) mod receiver;
 pub mod scanner;
 pub(crate) mod sender;
 pub mod serialization;
 
 /// Timeout for receiving any data from the remote side
-pub const RECEIVE_TIMEOUT: Duration = Duration::from_secs(15);
+pub const RECEIVE_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// Timeout when a host that was alive before stopped sending over 30 minutes ago
-pub const HOST_DEAD_TIMEOUT: Duration = Duration::from_secs(1800); // 30 minutes
+/// Timeout when a host that was alive before stopped sending over 10 minutes ago
+pub const HOST_DEAD_TIMEOUT: Duration = Duration::from_secs(600); // 10 minutes
 
 /// Max size of a single UDP packet that we can support
 pub const MAX_DATAGRAM_SIZE: usize = 65_507;
@@ -42,38 +44,44 @@ pub struct ScanOptionsV2 {
     pub enable_peeking: bool,
 }
 
-#[derive(Clone, Debug, Serialize)]
-pub struct ScanResultOutputFormat {
-    pub target: IpAddr,
-    pub target_port: u16,
-    pub completed: bool,
-    pub statistics: Statistics,
-    pub rejected: usize,
-    pub invalid_syntax: usize,
-    pub accepted: Vec<Finding>,
-    pub vendor_ids: Vec<Vec<u8>>,
-}
-
+/// Statistics tracked while executing an IKEv2 scan on a target
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct Statistics {
+    /// Number of non-critical errors that occurred during the scan, see logs for details
     pub errors: u64,
+    /// Number of sent bytes during the scan (excludes pre-scan exchanges)
     pub sent_bytes: u64,
+    /// Number of sent packets during the scan (excludes pre-scan exchanges)
     pub sent_packets: u64,
+    /// Number of received bytes during the scan (excludes pre-scan exchanges)
     pub recv_bytes: u64,
+    /// Number of received packets during the scan (excludes pre-scan exchanges)
     pub recv_packets: u64,
+    /// Total number of proposals as combinations of transformations that were checked in the scan
     pub total_checks: usize,
 }
 
+/// Tracker of results for a running scan. After the scan is completed, this can be
+/// used to identify which proposals were accepted or rejected by the target.
+/// `invalid_syntax` should be treated as rejected. The list of vendor IDs may
+/// be used for fingerprinting, but it is not a very reliable indicator.
+/// See also the [Results::to_findings] method to create a list of [Finding]s.
 #[derive(Debug, Default)]
 pub struct Results {
+    /// List of proposals accepted by the target
     pub accepted: Vec<Proposal>,
+    /// List of proposals rejected by the target
     pub rejected: Vec<Proposal>,
+    /// List of proposals that were not understood by the target;
+    /// should be treated as rejected but may allow fingerprinting
     pub invalid_syntax: Vec<Proposal>,
+    /// List of Vendor IDs that were sent by the target
     pub vendor_ids: Vec<Vec<u8>>,
 }
 
+/// Connection tracker for a running scan
 #[derive(Debug, Default)]
-pub struct Open {
+pub(crate) struct Open {
     /// List of sent [IKEv2] packets and the timestamp when they were sent; the ordering
     /// is not important and may be arbitrary due to retry and timeout logic.
     sent: Vec<(IKEv2, Instant)>,

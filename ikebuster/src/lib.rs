@@ -67,9 +67,13 @@ pub struct ScanOptions {
 /// Enum that signals which versions of IKE a destination supports
 #[derive(Debug, Clone)]
 pub enum SupportedVersions {
+    /// Only IKEv1 supported
     V1,
+    /// Only IKEv2 supported
     V2,
+    /// Both IKEv1 and IKEv2 supported
     Both,
+    /// Neither IKEv1 nor IKEv2 supported
     Neither,
 }
 

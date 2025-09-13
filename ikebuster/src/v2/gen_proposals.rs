@@ -1,3 +1,5 @@
+//! Generator for proposal lists for IKEv2
+
 use std::collections::VecDeque;
 
 use isakmp::strum::IntoEnumIterator;

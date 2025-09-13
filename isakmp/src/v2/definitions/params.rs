@@ -831,7 +831,7 @@ impl TryFrom<u8> for SecurityProtocol {
 #[derive(Debug, Clone, Display, EnumIter, Copy, Serialize, Deserialize)] //
 #[derive(Hash, Ord, PartialOrd, Eq, PartialEq)]
 #[repr(u16)]
-#[allow(missing_docs)]
+#[allow(non_camel_case_types, missing_docs)]
 pub enum HashAlgorithm {
     SHA1 = 1,
     SHA2_256 = 2,

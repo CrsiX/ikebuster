@@ -47,7 +47,7 @@ pub(crate) async fn handle_sending(
                 return Err(ScanError::Timeout(HOST_DEAD_TIMEOUT));
             }
             // Otherwise, if packets were received already and the last packet was
-            // received less than 30 minutes ago, we just keep retrying with some
+            // received less than 10 minutes ago, we just keep retrying with some
             // packet, while the retry list is already empty at this point.
             if let Some((packet, _)) = open.sent.pop() {
                 send_packet(packet, socket, open, stats).await?;

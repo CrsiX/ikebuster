@@ -1,7 +1,6 @@
 //! IKEv2 scan core functionality
 
 use std::collections::{HashMap, VecDeque};
-use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -162,7 +161,7 @@ fn dump_state(
 /// Handler around a running IKEv2 scan
 pub struct ScanV2Handler {
     task: JoinHandle<Result<(Results, Statistics), ScanError>>,
-    socket: Arc<UdpSocket>,
+    _socket: Arc<UdpSocket>, // kept in the handler to not close the underlying socket automatically
     controller: mpsc::Sender<ControlChannelEvent>,
 }
 
@@ -264,7 +263,7 @@ pub async fn start_scan(options: &ScanOptionsV2) -> Result<ScanV2Handler, ScanEr
     let (tx, rx) = mpsc::channel(1);
     Ok(ScanV2Handler {
         task: tokio::spawn(scan(rx, socket.clone(), options.clone())),
-        socket,
+        _socket: socket,
         controller: tx,
     })
 }
