@@ -252,43 +252,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Cli::parse();
-    if cli.transforms < 1 {
-        owo_println!("At least one transform is required".bright_red());
-        exit(2);
-    }
-
-    if cli.verbose > 0 {
-        match cli.verbose {
-            1 => env::set_var("RUST_LOG", "ikebuster=debug"),
-            _ => env::set_var("RUST_LOG", "ikebuster=trace"),
-        }
-    } else if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info");
-    }
-    tracing_subscriber::fmt::init();
-
-    println!("{}", BANNER.blue().bold());
-
-    match cli.mode {
-        ScanMode::V1 => {}
-        ScanMode::V2 => {
-            return main_v2(&cli).await;
-        }
-        ScanMode::Both => {
-            // TODO: Implement both modes sequentially
-            println!("Unsupported scan mode.");
-            exit(2);
-        }
-        ScanMode::Autodetect => {
-            // TODO: Implement autodetection mode
-            println!("Unsupported scan mode.");
-            exit(2);
-        }
-    }
-
+async fn main_v1(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     let opts = ScanOptions {
         ip: cli.ip,
         port: cli.port,
@@ -337,7 +301,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             valid.group_description,
         ));
     }
-    if let Some(target) = cli.json {
+    if let Some(target) = &cli.json {
         owo_println!("---------------");
         let Ok(serialized) = serde_json::to_string_pretty(&DataOutput {
             target: SocketAddr::new(cli.ip, cli.port),
@@ -347,7 +311,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             exit(1);
         };
 
-        let mut file = match File::create(&target) {
+        let mut file = match File::create(target) {
             Ok(file) => file,
             Err(err) => {
                 owo_println!(format!("Error creating json file: {err}").bright_red());
@@ -363,6 +327,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Written json output to".bright_black(),
             target.default_color()
         ));
+    }
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cli = Cli::parse();
+    if cli.transforms < 1 {
+        owo_println!("At least one transform is required".bright_red());
+        exit(2);
+    }
+
+    if cli.verbose > 0 {
+        match cli.verbose {
+            1 => env::set_var("RUST_LOG", "ikebuster=debug"),
+            _ => env::set_var("RUST_LOG", "ikebuster=trace"),
+        }
+    } else if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info");
+    }
+    tracing_subscriber::fmt::init();
+
+    println!("{}", BANNER.blue().bold());
+
+    match cli.mode {
+        ScanMode::V1 => {
+            main_v1(&cli).await?;
+        }
+        ScanMode::V2 => {
+            main_v2(&cli).await?;
+        }
+        ScanMode::Both => {
+            // TODO: Implement both modes sequentially
+            println!("Unsupported scan mode.");
+            exit(2);
+        }
+        ScanMode::Autodetect => {
+            // TODO: Implement autodetection mode
+            println!("Unsupported scan mode.");
+            exit(2);
+        }
     }
 
     owo_println!("---------------");
