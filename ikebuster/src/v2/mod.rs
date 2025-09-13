@@ -8,7 +8,7 @@ use crate::v2::finding::{Finding, FindingResult};
 
 pub mod finding;
 pub mod gen_proposals;
-mod peeking;
+pub mod peeking;
 pub(crate) mod receiver;
 pub mod scanner;
 pub(crate) mod sender;

@@ -252,7 +252,7 @@ pub async fn start_scan(options: &ScanOptionsV2) -> Result<ScanV2Handler, ScanEr
         debug!("Peeking with a blown-up IKEv2 message...");
         match tokio::time::timeout(RECEIVE_TIMEOUT, peek(&socket)).await {
             Ok(v) => match v {
-                Ok(s) => {}
+                Ok(_) => {}
                 Err(e) => return Err(e),
             },
             Err(e) => {
