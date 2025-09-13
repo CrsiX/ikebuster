@@ -25,7 +25,7 @@ pub struct Finding {
     pub result: FindingResult,
 }
 
-pub fn format_to_csv(findings: &Vec<Finding>) -> Result<String, std::fmt::Error> {
+pub fn format_to_csv(findings: &[Finding]) -> Result<String, std::fmt::Error> {
     let mut result =
         "\"number\";\"encryption\";\"key_size\";\"is_aead\";\"prf\";\"integrity\";\"key_exchange\";\"result\"\n"
             .to_string();

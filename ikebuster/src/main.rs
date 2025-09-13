@@ -9,8 +9,9 @@ use std::{env, fs};
 use clap::ArgAction;
 use clap::Parser;
 use ikebuster::v2::finding::{Finding, FindingResult};
-use ikebuster::v2::{ScanOptionsV2, ScanResultOutputFormat};
-use ikebuster::ScanOptions;
+use ikebuster::v2::serialization::ScanResultOutputFormat;
+use ikebuster::v2::ScanOptionsV2;
+use ikebuster::{detect_supported_versions, ScanOptions, SupportedVersions};
 use ikebuster::{v2, ScanError};
 use isakmp::v1::generator::Transform;
 use owo_colors::OwoColorize;
@@ -331,6 +332,35 @@ async fn main_v1(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn main_both(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+    owo_println!("Starting scan for IKEv2, then scanning IKEv1...");
+    main_v2(&cli).await?;
+    let result_v2 = if let Some(json) = &cli.json {
+        Some(fs::read_to_string(json)?)
+    } else {
+        None
+    };
+    main_v1(&cli).await?;
+    if let Some(json) = &cli.json {
+        let result_v1 = fs::read_to_string(json)?;
+        if let Some(result_v2) = result_v2 {
+            let mut file = match File::create(json) {
+                Ok(file) => file,
+                Err(err) => {
+                    owo_println!(format!("Error creating json file: {err}").bright_red());
+                    exit(1);
+                }
+            };
+            write!(
+                file,
+                "{{\n  \"v1\": {result_v1},\n  \"v2\": {result_v2}\n}}"
+            )?;
+            file.flush()?;
+        }
+    }
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
@@ -359,34 +389,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             main_v2(&cli).await?;
         }
         ScanMode::Both => {
-            owo_println!("Starting scan for IKEv2, then scanning IKEv1...");
-            main_v2(&cli).await?;
-            let result_v2 = if let Some(json) = &cli.json {
-                Some(fs::read_to_string(json)?)
-            } else {
-                None
-            };
-            main_v1(&cli).await?;
-            if let Some(json) = &cli.json {
-                let result_v1 = fs::read_to_string(json)?;
-                if let Some(result_v2) = result_v2 {
-                    let mut file = match File::create(json) {
-                        Ok(file) => file,
-                        Err(err) => {
-                            owo_println!(format!("Error creating json file: {err}").bright_red());
-                            exit(1);
-                        }
-                    };
-                    write!(
-                        file,
-                        "{{\n  \"v1\": {result_v1},\n  \"v2\": {result_v2}\n}}"
-                    )?;
-                    file.flush()?;
-                }
-            }
+            main_both(&cli).await?;
         }
         ScanMode::Autodetect => {
             owo_println!("Trying to autodetect the IKE version supported by the destination...");
+            let supported_versions = detect_supported_versions(cli.ip, cli.port, cli.listen_port)
+                .await
+                .map_err(|e| {
+                    owo_println!("Failed to detect IKE version!".bright_red());
+                    owo_println!(format!("Error: {:#?}", e).red());
+                    e
+                })?;
+            owo_println!(
+                format!("Detected supported IKE versions: {supported_versions:#?}").green()
+            );
+            match supported_versions {
+                SupportedVersions::V1 => {
+                    main_v1(&cli).await?;
+                }
+                SupportedVersions::V2 => {
+                    main_v2(&cli).await?;
+                }
+                SupportedVersions::Both => {
+                    main_both(&cli).await?;
+                }
+                SupportedVersions::Neither => {
+                    owo_println!("The autodetection could not determine the supported versions of the target.".yellow());
+                    owo_println!("Consider checking if the host is reachable, and specify the version explicitly.".yellow());
+                }
+            }
         }
     }
 

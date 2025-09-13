@@ -12,7 +12,9 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use isakmp::v1::definitions::NotifyMessageType;
+use isakmp::v1::definitions::{
+    AuthenticationMethod, EncryptionAlgorithm, GroupDescription, HashAlgorithm, NotifyMessageType,
+};
 use isakmp::v1::generator::MessageBuilder;
 use isakmp::v1::generator::Transform;
 use thiserror::Error;
@@ -31,6 +33,8 @@ use tracing::warn;
 use crate::recv::ReceiveError;
 use crate::utils::gen_transforms::gen_v1_transforms;
 use crate::utils::payload_to_transforms::payload_to_transforms;
+use crate::v2::peeking::peek;
+use crate::v2::RECEIVE_TIMEOUT;
 
 mod recv;
 pub mod utils;
@@ -58,6 +62,15 @@ pub struct ScanOptions {
     ///
     /// This may be important as some servers timeout requests when requests aren't fully closed
     pub sleep_on_transform_found: Duration,
+}
+
+/// Enum that signals which versions of IKE a destination supports
+#[derive(Debug, Clone)]
+pub enum SupportedVersions {
+    V1,
+    V2,
+    Both,
+    Neither,
 }
 
 pub(crate) async fn bind(
@@ -180,9 +193,6 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
                             ReceiveError::InvalidMessage(err) => {
                                 trace!("Could not parse incoming message: {err}");
                             }
-                            ReceiveError::InvalidMessageV2(err) => {
-                                trace!("Could not parse incoming message: {err}");
-                            }
                         }
                     }
                 }
@@ -191,7 +201,7 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
             // Handle the sending of messages
             _ = interval.tick() => {
                 match todo.pop_front() {
-                    // Nothing more todo, this will be the return path
+                    // Nothing more to do, this will be the return path
                     None => {
                         debug!("Nothing more to do, waiting some time for more incoming messages");
                         interval.tick().await;
@@ -247,4 +257,59 @@ pub enum ScanError {
     Timeout(Duration),
     #[error("Destination is not capable of speaking IKEv2: {0}")]
     IKEv2NotSupported(String),
+}
+
+/// Detect the supported IKE versions of a target address
+///
+/// This does not mean that the target actually accepts any proposals,
+/// but rather that any connectivity via the protocol worked.
+pub async fn detect_supported_versions(
+    target: IpAddr,
+    target_port: u16,
+    listen_port: u16,
+) -> Result<SupportedVersions, ScanError> {
+    let socket = Arc::new(bind(target, target_port, listen_port).await?);
+
+    let v2_supported = match tokio::time::timeout(RECEIVE_TIMEOUT, peek(&socket)).await {
+        Ok(v) => match v {
+            Ok(_) => true,
+            Err(e) => match e {
+                ScanError::IKEv2NotSupported(_) => false,
+                _ => return Err(e),
+            },
+        },
+        Err(_) => false,
+    };
+
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let rx_handle = tokio::spawn(recv::handle_receive(socket.clone(), tx));
+    let mut mb = MessageBuilder::new();
+    mb = mb.add_transform(Transform {
+        encryption_algorithm: EncryptionAlgorithm::AES_CBC,
+        hash_algorithm: HashAlgorithm::SHA2_256,
+        authentication_method: AuthenticationMethod::RSASignatures,
+        group_description: GroupDescription::MODP_4096,
+        key_size: Some(256),
+    });
+    let (msg, _) = mb.build();
+    socket.send(&msg).await.map_err(ScanError::Send)?;
+
+    let v1_supported = matches!(
+        tokio::time::timeout(RECEIVE_TIMEOUT, rx.recv()).await,
+        Ok(Some(Ok(_)))
+    );
+    rx_handle.abort();
+    let _ = rx_handle.await;
+
+    Ok(if v2_supported {
+        if v1_supported {
+            SupportedVersions::Both
+        } else {
+            SupportedVersions::V2
+        }
+    } else if v1_supported {
+        SupportedVersions::V1
+    } else {
+        SupportedVersions::Neither
+    })
 }
