@@ -1,10 +1,10 @@
-use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::process::exit;
 use std::time::Duration;
+use std::{env, fs};
 
 use clap::ArgAction;
 use clap::Parser;
@@ -264,7 +264,7 @@ async fn main_v1(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     let res = match ikebuster::scan(opts).await {
         Ok(res) => res,
         Err(err) => {
-            match err {
+            match &err {
                 ScanError::CouldNotBind(e) => {
                     print_couldnt_bind_solution(500, &e)?;
                 }
@@ -272,7 +272,7 @@ async fn main_v1(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
                     owo_println!(format!("{err}").red().bold());
                 }
             }
-            exit(1);
+            return Err(err.into());
         }
     };
 
@@ -359,9 +359,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             main_v2(&cli).await?;
         }
         ScanMode::Both => {
-            // TODO: Implement both modes sequentially
-            println!("Unsupported scan mode.");
-            exit(2);
+            owo_println!("Starting scan for IKEv2, then scanning IKEv1...");
+            main_v2(&cli).await?;
+            let result_v2 = if let Some(json) = &cli.json {
+                Some(fs::read_to_string(json)?)
+            } else {
+                None
+            };
+            main_v1(&cli).await?;
+            if let Some(json) = &cli.json {
+                let result_v1 = fs::read_to_string(json)?;
+                if let Some(result_v2) = result_v2 {
+                    let mut file = match File::create(json) {
+                        Ok(file) => file,
+                        Err(err) => {
+                            owo_println!(format!("Error creating json file: {err}").bright_red());
+                            exit(1);
+                        }
+                    };
+                    write!(
+                        file,
+                        "{{\n  \"v1\": {result_v1},\n  \"v2\": {result_v2}\n}}"
+                    )?;
+                    file.flush()?;
+                }
+            }
         }
         ScanMode::Autodetect => {
             // TODO: Implement autodetection mode
