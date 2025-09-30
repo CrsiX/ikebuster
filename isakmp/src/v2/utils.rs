@@ -22,25 +22,16 @@ pub fn format_to_csv(proposals: Vec<Proposal>) -> Result<String, std::fmt::Error
                     if p.integrity_algorithms.is_empty() {
                         counter += 1;
                         result.write_fmt(format_args!(
-                            "\"{}\";\"{}\";\"{}\";\"{}\";\"{}\";\"{}\"\n",
-                            counter,
-                            i + 1,
-                            encryption,
-                            prf,
-                            "",
-                            kex
+                            "\"{counter}\";\"{proposal_no}\";\"{encryption}\";\"{prf}\";\"{integrity}\";\"{kex}\"\n",
+                            proposal_no = i + 1,
+                            integrity = ""
                         ))?
                     }
                     for integrity in p.integrity_algorithms.iter() {
                         counter += 1;
                         result.write_fmt(format_args!(
-                            "\"{}\";\"{}\";\"{}\";\"{}\";\"{}\";\"{}\"\n",
-                            counter,
-                            i + 1,
-                            encryption,
-                            prf,
-                            integrity,
-                            kex
+                            "\"{counter}\";\"{proposal_no}\";\"{encryption}\";\"{prf}\";\"{integrity}\";\"{kex}\"\n",
+                            proposal_no = i + 1
                         ))?
                     }
                 }

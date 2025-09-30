@@ -51,23 +51,23 @@ pub fn format_to_csv(findings: &[Finding]) -> Result<String, std::fmt::Error> {
 
     for (i, f) in findings.iter().enumerate() {
         result.write_fmt(format_args!(
-            "\"{}\";\"{}\";\"{}\";\"{}\";\"{}\";\"{}\";\"{}\";\"{}\"\n",
-            i + 1,
-            f.encryption,
-            if let Some(s) = f.key_size {
+            "\"{number}\";\"{encryption}\";\"{key_size}\";\"{is_aead}\";\"{prf}\";\"{integrity}\";\"{key_exchange}\";\"{result}\"\n",
+            number = i + 1,
+            encryption = f.encryption,
+            key_size = if let Some(s) = f.key_size {
                 s.to_string()
             } else {
                 "".to_string()
             },
-            f.is_aead,
-            f.prf,
-            if let Some(integrity) = f.integrity {
+            is_aead = f.is_aead,
+            prf = f.prf,
+            integrity = if let Some(integrity) = f.integrity {
                 integrity.to_string()
             } else {
                 "".to_string()
             },
-            f.kex,
-            f.result
+            key_exchange = f.kex,
+            result = f.result
         ))?
     }
     Ok(result)
