@@ -1,9 +1,13 @@
 use crate::v2::definitions::constants::MINIMAL_NOTIFY_STATUS_MESSAGE_VALUE;
 use crate::v2::definitions::header::NotifyHeader;
-use crate::v2::definitions::params::{
-    EncryptionAlgorithm, ExchangeType, KeyExchangeMethod, SecurityProtocol,
-};
-use crate::v2::definitions::{IKEv2, Payload, Proposal, Transform};
+use crate::v2::definitions::params::EncryptionAlgorithm;
+use crate::v2::definitions::params::ExchangeType;
+use crate::v2::definitions::params::KeyExchangeMethod;
+use crate::v2::definitions::params::SecurityProtocol;
+use crate::v2::definitions::IKEv2;
+use crate::v2::definitions::Payload;
+use crate::v2::definitions::Proposal;
+use crate::v2::definitions::Transform;
 
 impl IKEv2 {
     /// Create a "hello" (`IKE_SA_INIT`) packet with the respective payloads that

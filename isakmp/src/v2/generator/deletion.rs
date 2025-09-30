@@ -1,9 +1,11 @@
-use zerocopy::network_endian::{U16, U32};
+use zerocopy::network_endian::U16;
+use zerocopy::network_endian::U32;
 use zerocopy::AsBytes;
 
 use crate::v1::definitions::GenericPayloadHeader;
 use crate::v2::definitions::header::DeleteHeader;
-use crate::v2::definitions::params::{PayloadType, SecurityProtocol};
+use crate::v2::definitions::params::PayloadType;
+use crate::v2::definitions::params::SecurityProtocol;
 use crate::v2::definitions::Deletion;
 
 impl Deletion {

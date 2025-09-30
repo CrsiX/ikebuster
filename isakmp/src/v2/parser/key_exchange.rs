@@ -1,8 +1,9 @@
+use zerocopy::FromBytes;
+
 use crate::v2::definitions::header::KeyExchangeHeader;
 use crate::v2::definitions::params::KeyExchangeMethod;
 use crate::v2::definitions::KeyExchange;
 use crate::v2::parser::ParserError;
-use zerocopy::FromBytes;
 
 impl KeyExchange {
     /// Parses a buffer into a [KeyExchange]. The buffer must not contain the

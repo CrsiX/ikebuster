@@ -1,8 +1,9 @@
+use zerocopy::FromBytes;
+
 use crate::v2::definitions::header::CertificateHeader;
 use crate::v2::definitions::params::CertificateEncoding;
 use crate::v2::definitions::CertificateRequest;
 use crate::v2::parser::ParserError;
-use zerocopy::FromBytes;
 
 impl CertificateRequest {
     /// Parses a buffer into a [CertificateRequest]. The buffer must not contain the

@@ -1,11 +1,21 @@
-use crate::v2::definitions::params::{
-    EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod, NotifyErrorMessage,
-    NotifyStatusMessage, PayloadType, PseudorandomFunction, SecurityProtocol,
-};
-use crate::v2::definitions::{
-    GenericPayloadHeader, IKEv2, KeyExchange, Notification, NotificationType, Payload, Proposal,
-    SecurityAssociation, Transform,
-};
+use crate::v2::definitions::params::EncryptionAlgorithm;
+use crate::v2::definitions::params::ExchangeType;
+use crate::v2::definitions::params::IntegrityAlgorithm;
+use crate::v2::definitions::params::KeyExchangeMethod;
+use crate::v2::definitions::params::NotifyErrorMessage;
+use crate::v2::definitions::params::NotifyStatusMessage;
+use crate::v2::definitions::params::PayloadType;
+use crate::v2::definitions::params::PseudorandomFunction;
+use crate::v2::definitions::params::SecurityProtocol;
+use crate::v2::definitions::GenericPayloadHeader;
+use crate::v2::definitions::IKEv2;
+use crate::v2::definitions::KeyExchange;
+use crate::v2::definitions::Notification;
+use crate::v2::definitions::NotificationType;
+use crate::v2::definitions::Payload;
+use crate::v2::definitions::Proposal;
+use crate::v2::definitions::SecurityAssociation;
+use crate::v2::definitions::Transform;
 use crate::v2::generator::GeneratorError;
 use crate::v2::parser::ParserError;
 

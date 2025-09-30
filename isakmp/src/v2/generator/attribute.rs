@@ -1,8 +1,9 @@
+use zerocopy::network_endian::U16;
+use zerocopy::AsBytes;
+
 use crate::v2::definitions::header::AttributeHeader;
 use crate::v2::definitions::params::AttributeType;
 use crate::v2::definitions::Attribute;
-use zerocopy::network_endian::U16;
-use zerocopy::AsBytes;
 
 impl Attribute {
     pub(crate) fn build(&self) -> Vec<u8> {

@@ -1,8 +1,10 @@
+use zerocopy::FromBytes;
+
 use crate::v2::definitions::constants::FLAG_MORE_FOLLOWING_PROPOSALS;
 use crate::v2::definitions::header::ProposalHeader;
-use crate::v2::definitions::{Proposal, SecurityAssociation};
+use crate::v2::definitions::Proposal;
+use crate::v2::definitions::SecurityAssociation;
 use crate::v2::parser::ParserError;
-use zerocopy::FromBytes;
 
 impl SecurityAssociation {
     /// Parses a buffer into a [SecurityAssociation]. The buffer must not contain the

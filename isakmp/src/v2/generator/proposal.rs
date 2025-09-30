@@ -1,9 +1,12 @@
-use crate::v2::definitions::header::ProposalHeader;
-use crate::v2::definitions::params::SecurityProtocol;
-use crate::v2::definitions::{Proposal, Transform};
-use crate::v2::generator::{GeneratorError, EXPECTED_TRANSFORM_LENGTH};
 use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
+
+use crate::v2::definitions::header::ProposalHeader;
+use crate::v2::definitions::params::SecurityProtocol;
+use crate::v2::definitions::Proposal;
+use crate::v2::definitions::Transform;
+use crate::v2::generator::GeneratorError;
+use crate::v2::generator::EXPECTED_TRANSFORM_LENGTH;
 
 impl Proposal {
     /// Convert a [Proposal] into a network-level vector of bytes
@@ -101,11 +104,13 @@ impl Proposal {
 
 #[cfg(test)]
 mod tests {
-    use crate::v2::definitions::params::{
-        EncryptionAlgorithm, IntegrityAlgorithm, PseudorandomFunction,
-    };
-    use crate::v2::definitions::params::{KeyExchangeMethod, SecurityProtocol};
-    use crate::v2::definitions::{Proposal, Transform};
+    use crate::v2::definitions::params::EncryptionAlgorithm;
+    use crate::v2::definitions::params::IntegrityAlgorithm;
+    use crate::v2::definitions::params::KeyExchangeMethod;
+    use crate::v2::definitions::params::PseudorandomFunction;
+    use crate::v2::definitions::params::SecurityProtocol;
+    use crate::v2::definitions::Proposal;
+    use crate::v2::definitions::Transform;
     use crate::v2::generator::GeneratorError::MissingMandatoryTransform;
 
     #[test]

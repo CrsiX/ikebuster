@@ -10,9 +10,10 @@ mod packet;
 mod proposal;
 mod security_association;
 
+use thiserror::Error;
+
 use crate::v2::definitions::params::PayloadType;
 use crate::v2::definitions::UnparseableParameter;
-use thiserror::Error;
 
 /// Failure while parsing an [IKEv2] packet from network-level byte representation
 #[derive(Debug, Error, PartialEq)]

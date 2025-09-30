@@ -1,9 +1,10 @@
+use zerocopy::network_endian::U16;
+use zerocopy::AsBytes;
+
 use crate::v1::definitions::GenericPayloadHeader;
 use crate::v2::definitions::header::KeyExchangeHeader;
 use crate::v2::definitions::params::PayloadType;
 use crate::v2::definitions::KeyExchange;
-use zerocopy::network_endian::U16;
-use zerocopy::AsBytes;
 
 impl KeyExchange {
     pub(crate) fn build(&self, next_payload: PayloadType) -> Vec<u8> {
@@ -26,7 +27,8 @@ impl KeyExchange {
 
 #[cfg(test)]
 mod tests {
-    use crate::v2::definitions::params::{KeyExchangeMethod, PayloadType};
+    use crate::v2::definitions::params::KeyExchangeMethod;
+    use crate::v2::definitions::params::PayloadType;
     use crate::v2::definitions::KeyExchange;
 
     #[test]

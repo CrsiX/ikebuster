@@ -1,7 +1,10 @@
-use crate::v2::definitions::params::PayloadType;
-use crate::v2::definitions::{GenericPayloadHeader, SecurityAssociation};
-use crate::v2::generator::{GeneratorError, ESTIMATED_PROPOSAL_LENGTH};
 use zerocopy::AsBytes;
+
+use crate::v2::definitions::params::PayloadType;
+use crate::v2::definitions::GenericPayloadHeader;
+use crate::v2::definitions::SecurityAssociation;
+use crate::v2::generator::GeneratorError;
+use crate::v2::generator::ESTIMATED_PROPOSAL_LENGTH;
 
 impl SecurityAssociation {
     /// Build a network-level packet from a [SecurityAssociation]#
@@ -33,11 +36,15 @@ impl SecurityAssociation {
 
 #[cfg(test)]
 mod tests {
-    use crate::v2::definitions::params::{
-        EncryptionAlgorithm, IntegrityAlgorithm, KeyExchangeMethod, PayloadType,
-        PseudorandomFunction, SecurityProtocol,
-    };
-    use crate::v2::definitions::{Proposal, SecurityAssociation, Transform};
+    use crate::v2::definitions::params::EncryptionAlgorithm;
+    use crate::v2::definitions::params::IntegrityAlgorithm;
+    use crate::v2::definitions::params::KeyExchangeMethod;
+    use crate::v2::definitions::params::PayloadType;
+    use crate::v2::definitions::params::PseudorandomFunction;
+    use crate::v2::definitions::params::SecurityProtocol;
+    use crate::v2::definitions::Proposal;
+    use crate::v2::definitions::SecurityAssociation;
+    use crate::v2::definitions::Transform;
 
     #[test]
     #[allow(clippy::unwrap_used)]

@@ -1,8 +1,10 @@
-use crate::v2::definitions::header::TransformHeader;
-use crate::v2::definitions::params::TransformType;
-use crate::v2::definitions::{Attribute, Transform};
 use zerocopy::network_endian::U16;
 use zerocopy::AsBytes;
+
+use crate::v2::definitions::header::TransformHeader;
+use crate::v2::definitions::params::TransformType;
+use crate::v2::definitions::Attribute;
+use crate::v2::definitions::Transform;
 
 impl Transform {
     /// Convert a [Transform] into a network-level vector of bytes

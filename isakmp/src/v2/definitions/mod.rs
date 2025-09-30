@@ -5,16 +5,22 @@ pub mod header;
 mod impls;
 pub mod params;
 
-use serde::{Deserialize, Serialize};
+use params::CertificateEncoding;
+use params::EncryptionAlgorithm;
+use params::ExchangeType;
+use params::IntegrityAlgorithm;
+use params::KeyExchangeMethod;
+use params::NotifyErrorMessage;
+use params::NotifyStatusMessage;
+use params::PseudorandomFunction;
+use params::SecurityProtocol;
+use params::SequenceNumberType;
+use serde::Deserialize;
+use serde::Serialize;
 use strum::Display;
 
 pub use super::super::v1::definitions::GenericPayloadHeader;
 pub use super::super::v1::definitions::Header;
-use params::{
-    CertificateEncoding, EncryptionAlgorithm, ExchangeType, IntegrityAlgorithm, KeyExchangeMethod,
-    NotifyErrorMessage, NotifyStatusMessage, PseudorandomFunction, SecurityProtocol,
-    SequenceNumberType,
-};
 
 /// When parsing a parameter from u8, there are several "regions" in the definitions
 /// that can't be defined by Rusts enum. Typically, the last two regions of the

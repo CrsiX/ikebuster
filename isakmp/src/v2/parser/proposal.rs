@@ -1,13 +1,21 @@
-use crate::v2::definitions::constants::{FLAG_ATTRIBUTE_FORMAT, FLAG_MORE_FOLLOWING_TRANSFORMS};
-use crate::v2::definitions::header::{AttributeHeader, ProposalHeader, TransformHeader};
-use crate::v2::definitions::params::{
-    AttributeType, EncryptionAlgorithm, IntegrityAlgorithm, KeyExchangeMethod,
-    PseudorandomFunction, SecurityProtocol, SequenceNumberType, TransformType,
-};
-use crate::v2::definitions::Proposal;
-use crate::v2::parser::ParserError;
 use log::warn;
 use zerocopy::FromBytes;
+
+use crate::v2::definitions::constants::FLAG_ATTRIBUTE_FORMAT;
+use crate::v2::definitions::constants::FLAG_MORE_FOLLOWING_TRANSFORMS;
+use crate::v2::definitions::header::AttributeHeader;
+use crate::v2::definitions::header::ProposalHeader;
+use crate::v2::definitions::header::TransformHeader;
+use crate::v2::definitions::params::AttributeType;
+use crate::v2::definitions::params::EncryptionAlgorithm;
+use crate::v2::definitions::params::IntegrityAlgorithm;
+use crate::v2::definitions::params::KeyExchangeMethod;
+use crate::v2::definitions::params::PseudorandomFunction;
+use crate::v2::definitions::params::SecurityProtocol;
+use crate::v2::definitions::params::SequenceNumberType;
+use crate::v2::definitions::params::TransformType;
+use crate::v2::definitions::Proposal;
+use crate::v2::parser::ParserError;
 
 impl Proposal {
     pub(crate) fn try_parse(header: &ProposalHeader, buf: &[u8]) -> Result<Self, ParserError> {

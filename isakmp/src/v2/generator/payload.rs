@@ -1,9 +1,10 @@
+use zerocopy::network_endian::U16;
+use zerocopy::AsBytes;
+
 use crate::v1::definitions::GenericPayloadHeader;
 use crate::v2::definitions::params::PayloadType;
 use crate::v2::definitions::Payload;
 use crate::v2::generator::GeneratorError;
-use zerocopy::network_endian::U16;
-use zerocopy::AsBytes;
 
 impl Payload {
     pub(crate) fn try_build(&self, next_payload: PayloadType) -> Result<Vec<u8>, GeneratorError> {

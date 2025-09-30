@@ -1,12 +1,23 @@
-use crate::v1::definitions::{GenericPayloadHeader, Header};
-use crate::v2::definitions::constants::{FLAG_INITIATOR, FLAG_RESPONSE};
-use crate::v2::definitions::params::{ExchangeType, PayloadType};
-use crate::v2::definitions::{CertificateRequest, Deletion, IKEv2, KeyExchange, Payload};
-use crate::v2::definitions::{Notification, SecurityAssociation};
-use crate::v2::parser::{ParserError, ParserResult};
-use crate::v2::IKE_2_VERSION_VALUE;
-use log::{debug, warn};
+use log::debug;
+use log::warn;
 use zerocopy::FromBytes;
+
+use crate::v1::definitions::GenericPayloadHeader;
+use crate::v1::definitions::Header;
+use crate::v2::definitions::constants::FLAG_INITIATOR;
+use crate::v2::definitions::constants::FLAG_RESPONSE;
+use crate::v2::definitions::params::ExchangeType;
+use crate::v2::definitions::params::PayloadType;
+use crate::v2::definitions::CertificateRequest;
+use crate::v2::definitions::Deletion;
+use crate::v2::definitions::IKEv2;
+use crate::v2::definitions::KeyExchange;
+use crate::v2::definitions::Notification;
+use crate::v2::definitions::Payload;
+use crate::v2::definitions::SecurityAssociation;
+use crate::v2::parser::ParserError;
+use crate::v2::parser::ParserResult;
+use crate::v2::IKE_2_VERSION_VALUE;
 
 impl IKEv2 {
     /// Parse a buffer into an [IKEv2] packet, if possible.
@@ -126,7 +137,9 @@ fn try_parse_generic(buf: &[u8]) -> ParserResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use crate::v2::definitions::params::ExchangeType;
-    use crate::v2::definitions::{IKEv2, Payload, SecurityAssociation};
+    use crate::v2::definitions::IKEv2;
+    use crate::v2::definitions::Payload;
+    use crate::v2::definitions::SecurityAssociation;
 
     #[test]
     #[allow(clippy::unwrap_used)]

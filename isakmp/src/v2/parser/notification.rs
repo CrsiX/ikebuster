@@ -1,8 +1,12 @@
-use crate::v2::definitions::header::NotifyHeader;
-use crate::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage, SecurityProtocol};
-use crate::v2::definitions::{Notification, NotificationType};
-use crate::v2::parser::ParserError;
 use zerocopy::FromBytes;
+
+use crate::v2::definitions::header::NotifyHeader;
+use crate::v2::definitions::params::NotifyErrorMessage;
+use crate::v2::definitions::params::NotifyStatusMessage;
+use crate::v2::definitions::params::SecurityProtocol;
+use crate::v2::definitions::Notification;
+use crate::v2::definitions::NotificationType;
+use crate::v2::parser::ParserError;
 
 impl Notification {
     /// Parses a buffer into a [Notification]. The buffer must not contain the
