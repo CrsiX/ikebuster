@@ -115,6 +115,9 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
     // Lookup of cookie to the transforms that were sent in the corresponding message
     let mut open: HashMap<u64, Vec<Transform>> = HashMap::new();
 
+    // Number of cookies lost in attempts to remove them from the tracked list, used as a fallback
+    let mut lost_cookies = 0;
+
     // The valid transforms that were found
     let mut found: Vec<Transform> = vec![];
 
@@ -176,6 +179,7 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
                                 let removed = open.remove(&msg.header.initiator_cookie);
                                 if removed.is_none() {
                                     warn!("Could not find corresponding initiator cookie: {}", msg.header.initiator_cookie);
+                                    lost_cookies += 1;
                                 }
 
                             // A notification of type NO_PROPOSAL_CHOSEN means all transforms were invalid
@@ -183,6 +187,7 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
                                 let removed = open.remove(&msg.header.initiator_cookie);
                                 if removed.is_none() {
                                     warn!("Could not find corresponding initiator cookie: {}", msg.header.initiator_cookie);
+                                    lost_cookies += 1;
                                 }
                             } else {
                                 warn!("Unknown message: {:?}", msg)
@@ -209,13 +214,13 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
                     None => {
                         debug!("Nothing more to do, waiting some time for more incoming messages");
                         interval.tick().await;
-                        if todo.is_empty() {
+                        if todo.is_empty() && open.len() <= lost_cookies {
                             found.sort();
                             found.dedup();
 
                             return Ok(ScanResult {
                                 valid_transforms: found,
-                             })
+                            })
                         }
                     }
                     Some(transforms) => {
@@ -237,9 +242,9 @@ pub async fn scan(opts: ScanOptions) -> Result<ScanResult, ScanError> {
 
                         open.insert(initiator_cookie, transforms);
                         socket.send(&msg).await.map_err(ScanError::Send)?;
-
                     }
-                }
+                    }
+
             }
         }
     }
