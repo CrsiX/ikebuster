@@ -1,12 +1,15 @@
 //! Implementation of the new IKEv2 scanner, and related utilities
 
 use std::net::IpAddr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
-use isakmp::v2::definitions::{IKEv2, Proposal};
+use isakmp::v2::definitions::IKEv2;
+use isakmp::v2::definitions::Proposal;
 use serde::Serialize;
 
-use crate::v2::finding::{Finding, FindingResult};
+use crate::v2::finding::Finding;
+use crate::v2::finding::FindingResult;
 
 pub mod finding;
 pub mod gen_proposals;

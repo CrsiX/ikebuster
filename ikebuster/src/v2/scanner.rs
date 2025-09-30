@@ -1,25 +1,40 @@
 //! IKEv2 scan core functionality
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::Duration;
+use std::time::Instant;
+use std::time::SystemTime;
 
 use isakmp::v2::definitions::Proposal;
 use tokio::net::UdpSocket;
 use tokio::select;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
-use tokio::task::{JoinError, JoinHandle};
-use tokio::time::{interval, MissedTickBehavior};
-use tracing::{debug, error, info, trace, warn};
+use tokio::task::JoinError;
+use tokio::task::JoinHandle;
+use tokio::time::interval;
+use tokio::time::MissedTickBehavior;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::trace;
+use tracing::warn;
 
+use crate::bind;
 use crate::v2::gen_proposals::list_all_proposals;
 use crate::v2::peeking::peek;
 use crate::v2::receiver::handle_receiving;
 use crate::v2::sender::handle_sending;
 use crate::v2::serialization::ScannerSerialization;
-use crate::v2::{Open, Results, ScanOptionsV2, Statistics, MAX_DATAGRAM_SIZE, RECEIVE_TIMEOUT};
-use crate::{bind, ScanError};
+use crate::v2::Open;
+use crate::v2::Results;
+use crate::v2::ScanOptionsV2;
+use crate::v2::Statistics;
+use crate::v2::MAX_DATAGRAM_SIZE;
+use crate::v2::RECEIVE_TIMEOUT;
+use crate::ScanError;
 
 #[derive(Debug)]
 enum ControlChannelEvent {

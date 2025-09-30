@@ -3,14 +3,16 @@
 use std::collections::VecDeque;
 
 use isakmp::strum::IntoEnumIterator;
-use isakmp::v2::definitions::params::{
-    EncryptionAlgorithm, IntegrityAlgorithm, KeyExchangeMethod, PseudorandomFunction,
-    SecurityProtocol,
-};
+use isakmp::v2::definitions::params::EncryptionAlgorithm;
+use isakmp::v2::definitions::params::IntegrityAlgorithm;
+use isakmp::v2::definitions::params::KeyExchangeMethod;
+use isakmp::v2::definitions::params::PseudorandomFunction;
+use isakmp::v2::definitions::params::SecurityProtocol;
 use isakmp::v2::definitions::Proposal;
-use isakmp::v2::definitions::Transform::{
-    Encryption, Integrity, KeyExchange, PseudoRandomFunction,
-};
+use isakmp::v2::definitions::Transform::Encryption;
+use isakmp::v2::definitions::Transform::Integrity;
+use isakmp::v2::definitions::Transform::KeyExchange;
+use isakmp::v2::definitions::Transform::PseudoRandomFunction;
 use itertools::Itertools;
 use tracing::debug;
 

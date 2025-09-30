@@ -12,9 +12,11 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use isakmp::v1::definitions::{
-    AuthenticationMethod, EncryptionAlgorithm, GroupDescription, HashAlgorithm, NotifyMessageType,
-};
+use isakmp::v1::definitions::AuthenticationMethod;
+use isakmp::v1::definitions::EncryptionAlgorithm;
+use isakmp::v1::definitions::GroupDescription;
+use isakmp::v1::definitions::HashAlgorithm;
+use isakmp::v1::definitions::NotifyMessageType;
 use isakmp::v1::generator::MessageBuilder;
 use isakmp::v1::generator::Transform;
 use thiserror::Error;

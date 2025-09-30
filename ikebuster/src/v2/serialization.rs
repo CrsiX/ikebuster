@@ -1,6 +1,7 @@
 //! Serialization formats for IKEv2
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::net::IpAddr;
 
 use isakmp::v2::definitions::Proposal;

@@ -3,11 +3,23 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use isakmp::v2::definitions::constants::MIN_SUPPORTED_MSG_SIZE;
-use isakmp::v2::definitions::{IKEv2, KeyExchange, Payload, Proposal, SecurityAssociation};
+use isakmp::v2::definitions::IKEv2;
+use isakmp::v2::definitions::KeyExchange;
+use isakmp::v2::definitions::Payload;
+use isakmp::v2::definitions::Proposal;
+use isakmp::v2::definitions::SecurityAssociation;
 use tokio::net::UdpSocket;
-use tracing::{debug, error, instrument, trace, warn};
+use tracing::debug;
+use tracing::error;
+use tracing::instrument;
+use tracing::trace;
+use tracing::warn;
 
-use crate::v2::{Open, ScanOptionsV2, Statistics, HOST_DEAD_TIMEOUT, RECEIVE_TIMEOUT};
+use crate::v2::Open;
+use crate::v2::ScanOptionsV2;
+use crate::v2::Statistics;
+use crate::v2::HOST_DEAD_TIMEOUT;
+use crate::v2::RECEIVE_TIMEOUT;
 use crate::ScanError;
 
 /// Maximum number of packets that should be kept in `open` state simultaneously

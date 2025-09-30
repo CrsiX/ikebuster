@@ -3,11 +3,13 @@
 use std::fmt::Write;
 
 use isakmp::strum::Display;
-use isakmp::v2::definitions::params::{
-    EncryptionAlgorithm, IntegrityAlgorithm, KeyExchangeMethod, PseudorandomFunction,
-};
+use isakmp::v2::definitions::params::EncryptionAlgorithm;
+use isakmp::v2::definitions::params::IntegrityAlgorithm;
+use isakmp::v2::definitions::params::KeyExchangeMethod;
+use isakmp::v2::definitions::params::PseudorandomFunction;
 use isakmp::v2::definitions::Proposal;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// State of a finding, i.e. whether the proposal was accepted by the target or not
 #[derive(Debug, Clone, Display, PartialEq, Serialize, Deserialize)]

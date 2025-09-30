@@ -1,8 +1,19 @@
-use isakmp::v2::definitions::params::{NotifyErrorMessage, NotifyStatusMessage, SecurityProtocol};
-use isakmp::v2::definitions::{IKEv2, Notification, NotificationType, Payload, Proposal};
-use tracing::{debug, error, instrument, warn};
+use isakmp::v2::definitions::params::NotifyErrorMessage;
+use isakmp::v2::definitions::params::NotifyStatusMessage;
+use isakmp::v2::definitions::params::SecurityProtocol;
+use isakmp::v2::definitions::IKEv2;
+use isakmp::v2::definitions::Notification;
+use isakmp::v2::definitions::NotificationType;
+use isakmp::v2::definitions::Payload;
+use isakmp::v2::definitions::Proposal;
+use tracing::debug;
+use tracing::error;
+use tracing::instrument;
+use tracing::warn;
 
-use crate::v2::{Open, Results, Statistics};
+use crate::v2::Open;
+use crate::v2::Results;
+use crate::v2::Statistics;
 use crate::ScanError;
 
 /// Max number of proposals in a `NO_PROPOSAL_CHOSEN` reply that are confirmed

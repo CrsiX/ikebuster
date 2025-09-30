@@ -1,24 +1,30 @@
+use std::env;
+use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::process::exit;
 use std::time::Duration;
-use std::{env, fs};
 
 use clap::ArgAction;
 use clap::Parser;
-use ikebuster::v2::finding::{Finding, FindingResult};
+use ikebuster::detect_supported_versions;
+use ikebuster::v2;
+use ikebuster::v2::finding::Finding;
+use ikebuster::v2::finding::FindingResult;
 use ikebuster::v2::serialization::ScanResultOutputFormat;
 use ikebuster::v2::ScanOptionsV2;
-use ikebuster::{detect_supported_versions, ScanOptions, SupportedVersions};
-use ikebuster::{v2, ScanError};
+use ikebuster::ScanError;
+use ikebuster::ScanOptions;
+use ikebuster::SupportedVersions;
 use isakmp::v1::generator::Transform;
 use owo_colors::OwoColorize;
 use serde::Serialize;
 use tokio::select;
 use tokio::time::interval;
-use tracing::{debug, info};
+use tracing::debug;
+use tracing::info;
 
 const BANNER: &str = r#"
 Welcome to
