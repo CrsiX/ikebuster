@@ -9,6 +9,7 @@ use isakmp::v2::definitions::NotificationType;
 use isakmp::v2::definitions::Payload;
 use isakmp::v2::definitions::Proposal;
 use isakmp::v2::definitions::Transform;
+use isakmp::v2::parser::ParserError;
 use tokio::net::UdpSocket;
 use tracing::debug;
 use tracing::error;
@@ -107,6 +108,7 @@ pub(crate) async fn peek(socket: &UdpSocket) -> Result<bool, ScanError> {
                 );
                 match IKEv2::try_parse(&recv_buffer[..recv_bytes]) {
                     Ok(packet) => {
+                        accepted_indicators += 1;
                         for payload in packet.payloads.iter() {
                             match payload {
                                 Payload::SecurityAssociation(_)
@@ -137,7 +139,11 @@ pub(crate) async fn peek(socket: &UdpSocket) -> Result<bool, ScanError> {
                         }
                     }
                     Err(err) => {
-                        error!(err = ?err, "Failed to parse IKEv2 packet: {}", err);
+                        if let ParserError::WrongProtocol = err {
+                            info!(err = ?err, "Responder replied with different IKE protocol version. Try IKEv1.")
+                        } else {
+                            error!(err = ?err, "Failed to parse IKEv2 packet: {}", err);
+                        }
                         accepted_indicators -= 100;
                     }
                 }
