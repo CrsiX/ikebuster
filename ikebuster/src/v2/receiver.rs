@@ -126,7 +126,7 @@ fn handle_packet(
                 let (open_packet, _) = open.sent.swap_remove(tracked_packet_index);
                 if let Some(received_proposal) = sa.proposals.first() {
                     let mut todo = vec![];
-                    for p in open_packet
+                    let open_proposals = open_packet
                         .payloads
                         .into_iter()
                         .filter_map(|p| match p {
@@ -134,13 +134,34 @@ fn handle_packet(
                             _ => None,
                         })
                         .flatten()
-                    {
-                        if p == *received_proposal {
-                            results.accepted.push(p);
+                        .collect::<Vec<_>>();
+                    for p in open_proposals.iter() {
+                        if *p == *received_proposal {
+                            results.accepted.push(p.clone());
                         } else {
-                            todo.push(p);
+                            todo.push(p.clone());
                         }
                     }
+                    // If the length of the open proposals matches the list of to-do items,
+                    // which was filled above, then none of the open proposals was accepted.
+                    // This may happen if the proposal is slightly different, for example if it has
+                    // a key size attribute while no such attribute was sent to the responder first.
+                    // Then the above filtering loop needs to be repeated with a fix for it.
+                    if todo.len() == open_proposals.len() {
+                        todo.clear();
+                        let mut modified_proposal = received_proposal.clone();
+                        for r_p in modified_proposal.encryption_algorithms.iter_mut() {
+                            r_p.1 = None;
+                        }
+                        for p in open_proposals {
+                            if p == modified_proposal {
+                                results.accepted.push(p.clone());
+                            } else {
+                                todo.push(p);
+                            }
+                        }
+                    }
+
                     // Only the single accepted proposal is treated as finished, all others
                     // need to be retried to verify that they also work correctly
                     if !todo.is_empty() {
