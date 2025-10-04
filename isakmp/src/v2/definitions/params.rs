@@ -741,6 +741,15 @@ pub enum NotifyErrorMessage {
     StateNotFound = 47,
     TsMaxQueue = 48,
     RegistrationFailed = 49,
+    /// Windows uses the code 12345 (0x3039) from the 'private use' range to transmit status
+    /// information to other Windows peers. See strongSwan's docs for infos
+    /// [here](https://docs.strongswan.org/docs/latest/interop/microsoftStatusNotify.html).
+    /// The notification data is expected to be a 32-bit integer status code,
+    /// where its meaning can be looked up in the document
+    /// [here](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/1bc92ddf-b79e-413c-bbaa-99a5281a6c90).
+    /// For example, `0x000035ED` means `ERROR_IPSEC_IKE_TIMED_OUT` and `0x000035F0`
+    /// is `ERROR_IPSEC_IKE_SA_REAPED`. These codes will not be interpreted by this library though.
+    MicrosoftWindowsStatusNotify = 12345,
 }
 
 impl TryFrom<u16> for NotifyErrorMessage {
@@ -783,7 +792,9 @@ impl TryFrom<u16> for NotifyErrorMessage {
             48 => Ok(NotifyErrorMessage::TsMaxQueue),
             49 => Ok(NotifyErrorMessage::RegistrationFailed),
             50..=8191 => Err(UnparseableParameter::Unassigned),
-            8192..=16383 => Err(UnparseableParameter::PrivateUse),
+            8192..=12344 => Err(UnparseableParameter::PrivateUse),
+            12345 => Ok(NotifyErrorMessage::MicrosoftWindowsStatusNotify),
+            12346..=16383 => Err(UnparseableParameter::PrivateUse),
             16384..=65535 => Err(UnparseableParameter::OutOfRange),
         }
     }
