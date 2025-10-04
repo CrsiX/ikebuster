@@ -1,3 +1,4 @@
+use isakmp::v2::definitions::params::ExchangeType;
 use isakmp::v2::definitions::params::NotifyErrorMessage;
 use isakmp::v2::definitions::params::NotifyStatusMessage;
 use isakmp::v2::definitions::params::SecurityProtocol;
@@ -49,12 +50,21 @@ fn handle_packet(
     open: &mut Open,
     results: &mut Results,
 ) -> Result<(), ScanError> {
-    if !packet.response || packet.initiator {
-        error!(
+    if packet.initiator {
+        warn!(
             packet = ?packet,
-            "Received IKEv2 packet with response or initiator flags set, refusing to parse!"
+            "Received IKEv2 packet with initiator flag set, refused to parse"
         );
         stats.errors += 1;
+        return Ok(());
+    }
+    if !packet.response {
+        match packet.exchange_type {
+            ExchangeType::Informational => {}
+            _ => {
+                debug!(packet = ?packet, "Ignored IKEv2 request with non-informational payload");
+            }
+        }
         return Ok(());
     }
 
