@@ -6,6 +6,7 @@ use std::time::Instant;
 
 use isakmp::v2::definitions::IKEv2;
 use isakmp::v2::definitions::Proposal;
+use itertools::Itertools;
 use serde::Serialize;
 
 use crate::v2::finding::Finding;
@@ -118,6 +119,6 @@ impl Results {
             }
         }
 
-        findings
+        findings.into_iter().unique().collect_vec()
     }
 }

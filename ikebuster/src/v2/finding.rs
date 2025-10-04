@@ -12,7 +12,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 /// State of a finding, i.e. whether the proposal was accepted by the target or not
-#[derive(Debug, Clone, Display, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Display, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FindingResult {
     /// The proposal was accepted
     Accepted,
@@ -24,7 +24,7 @@ pub enum FindingResult {
 
 /// Fully populated test result for a single proposal made up of encryption algorithm,
 /// PRF algorithm, key exchange method and optional key size and integrity function
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Finding {
     /// Symmetric encryption algorithm
     pub encryption: EncryptionAlgorithm,

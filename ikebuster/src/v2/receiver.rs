@@ -160,10 +160,12 @@ fn handle_packet(
                     if todo.len() == open_proposals.len() {
                         todo.clear();
                         let mut modified_proposal = received_proposal.clone();
-                        for r_p in modified_proposal.encryption_algorithms.iter_mut() {
-                            r_p.1 = None;
-                        }
-                        for p in open_proposals {
+                        modified_proposal
+                            .encryption_algorithms
+                            .iter_mut()
+                            .for_each(|e| e.1 = None);
+                        for mut p in open_proposals {
+                            p.encryption_algorithms.iter_mut().for_each(|e| e.1 = None);
                             if p == modified_proposal {
                                 results.accepted.push(p.clone());
                             } else {
