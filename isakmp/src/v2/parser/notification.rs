@@ -1,3 +1,4 @@
+use log::warn;
 use zerocopy::FromBytes;
 
 use crate::v2::definitions::header::NotifyHeader;
@@ -29,8 +30,12 @@ impl Notification {
         if spi_size > 0 && protocol == SecurityProtocol::InternetKeyExchange {
             // It is not legal to have both an SPI and use IKE
             return Err(ParserError::ProtocolViolation);
+        } else if spi_size == 0 && protocol == SecurityProtocol::InternetKeyExchange {
+            // If the SPI is not sent and the protocol is IKE, the responder's implementation
+            // is not RFC-conform, but we will accept that anyway
+            warn!("Response violates the RFC as it uses IKE protocol for zero-size SPI notification, continuing anyway")
         } else if spi_size == 0 && protocol != SecurityProtocol::Reserved {
-            // If the SPI is not sent, the protocol ID must be 0 (=reserved)
+            // If the SPI is not sent, the protocol ID must be 0 (=reserved) or IKE (as above)
             return Err(ParserError::ProtocolViolation);
         }
 
