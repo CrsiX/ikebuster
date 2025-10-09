@@ -14,6 +14,7 @@ use tokio::net::UdpSocket;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
+use tracing::warn;
 
 use crate::v2::sender::make_new_hello_packet;
 use crate::v2::MAX_DATAGRAM_SIZE;
@@ -123,9 +124,13 @@ pub(crate) async fn peek(socket: &UdpSocket) -> Result<bool, ScanError> {
                                                     "Destination is not capable of speaking IKEv2"
                                                 );
                                             }
-                                            NotifyErrorMessage::NoProposalChosen
-                                            | NotifyErrorMessage::InvalidSyntax => {
-                                                accepted_indicators -= 100
+                                            NotifyErrorMessage::NoProposalChosen => {
+                                                debug!("Responder understood the request but did not pick any proposal.");
+                                                accepted_indicators -= 10
+                                            }
+                                            NotifyErrorMessage::InvalidSyntax => {
+                                                warn!(packet = ?packet, "Responder rejected the request with INVALID_SYNTAX!");
+                                                accepted_indicators -= 40
                                             }
                                             NotifyErrorMessage::InvalidKeyExchangePayload => {
                                                 accepted_indicators += 1
