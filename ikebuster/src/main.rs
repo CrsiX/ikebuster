@@ -167,9 +167,8 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
 
                 if let Some(json_state_path) = &cli.json_state {
                     if let Some(state) = handler.dump_state().await {
-                        let mut file = File::create(json_state_path)?;
-                        let content = serde_json::to_string_pretty(&state)?;
-                        let _ = file.write(content.as_bytes())?;
+                        let file = File::create(json_state_path)?;
+                        serde_json::to_writer_pretty(file, &state)?;
                     }
                 }
             }
@@ -205,7 +204,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(csv_path) = &cli.csv {
         let mut file = File::create(csv_path)?;
         let content = v2::finding::format_to_csv(&findings)?;
-        let _ = file.write(content.as_bytes())?;
+        file.write_all(content.as_bytes())?;
     }
     if let Some(json_path) = &cli.json {
         let mut file = File::create(json_path)?;
@@ -223,7 +222,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
                 .collect(),
             vendor_ids: results.vendor_ids,
         })?;
-        let _ = file.write(content.as_bytes())?;
+        file.write_all(content.as_bytes())?;
     }
 
     owo_println!("---------------");

@@ -24,7 +24,7 @@ use tracing::warn;
 
 use crate::bind;
 use crate::v2::gen_proposals::list_all_proposals;
-use crate::v2::peeking::peek;
+use crate::v2::probing::probe_target;
 use crate::v2::receiver::handle_receiving;
 use crate::v2::sender::handle_sending;
 use crate::v2::serialization::ScannerSerialization;
@@ -264,7 +264,7 @@ pub async fn start_scan(options: &ScanOptionsV2) -> Result<ScanV2Handler, ScanEr
 
     if options.enable_peeking {
         debug!("Peeking with a blown-up IKEv2 message...");
-        match tokio::time::timeout(RECEIVE_TIMEOUT, peek(&socket)).await {
+        match tokio::time::timeout(RECEIVE_TIMEOUT, probe_target(&socket)).await {
             Ok(v) => match v {
                 Ok(_) => {}
                 Err(e) => return Err(e),

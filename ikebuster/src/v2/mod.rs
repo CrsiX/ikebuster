@@ -14,7 +14,7 @@ use crate::v2::finding::FindingResult;
 
 pub mod finding;
 pub mod gen_proposals;
-pub(crate) mod peeking;
+pub(crate) mod probing;
 pub(crate) mod receiver;
 pub mod scanner;
 pub(crate) mod sender;

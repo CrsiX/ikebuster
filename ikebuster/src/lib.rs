@@ -35,7 +35,7 @@ use tracing::warn;
 use crate::recv::ReceiveError;
 use crate::utils::gen_transforms::gen_v1_transforms;
 use crate::utils::payload_to_transforms::payload_to_transforms;
-use crate::v2::peeking::peek;
+use crate::v2::probing::probe_target;
 use crate::v2::RECEIVE_TIMEOUT;
 
 mod recv;
@@ -281,7 +281,7 @@ pub async fn detect_supported_versions(
 ) -> Result<SupportedVersions, ScanError> {
     let socket = Arc::new(bind(target, target_port, listen_port).await?);
 
-    let v2_supported = match tokio::time::timeout(RECEIVE_TIMEOUT, peek(&socket)).await {
+    let v2_supported = match tokio::time::timeout(RECEIVE_TIMEOUT, probe_target(&socket)).await {
         Ok(v) => match v {
             Ok(_) => true,
             Err(e) => match e {
@@ -310,7 +310,6 @@ pub async fn detect_supported_versions(
         Ok(Some(Ok(_)))
     );
     rx_handle.abort();
-    let _ = rx_handle.await;
 
     Ok(if v2_supported {
         if v1_supported {

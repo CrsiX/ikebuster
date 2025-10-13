@@ -54,3 +54,6 @@ pub const FLAG_MORE_FOLLOWING_TRANSFORMS: u8 = 3;
 /// Constant of the value for the smallest possible
 /// [NotifyStatusMessage](super::NotifyStatusMessage)
 pub const MINIMAL_NOTIFY_STATUS_MESSAGE_VALUE: u16 = 16384;
+
+/// The maximum size of a single notification cookie payload
+pub const MAX_COOKIE_DATA_SIZE: usize = 64;

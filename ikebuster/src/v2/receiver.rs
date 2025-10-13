@@ -1,3 +1,4 @@
+use isakmp::v2::definitions::constants::MAX_COOKIE_DATA_SIZE;
 use isakmp::v2::definitions::params::ExchangeType;
 use isakmp::v2::definitions::params::NotifyErrorMessage;
 use isakmp::v2::definitions::params::NotifyStatusMessage;
@@ -152,6 +153,7 @@ fn handle_packet(
                             todo.push(p.clone());
                         }
                     }
+
                     // If the length of the open proposals matches the list of to-do items,
                     // which was filled above, then none of the open proposals was accepted.
                     // This may happen if the proposal is slightly different, for example if it has
@@ -160,12 +162,13 @@ fn handle_packet(
                     if todo.len() == open_proposals.len() {
                         todo.clear();
                         let mut modified_proposal = received_proposal.clone();
-                        modified_proposal
-                            .encryption_algorithms
-                            .iter_mut()
-                            .for_each(|e| e.1 = None);
+                        for e in modified_proposal.encryption_algorithms.iter_mut() {
+                            e.1 = None
+                        }
                         for mut p in open_proposals {
-                            p.encryption_algorithms.iter_mut().for_each(|e| e.1 = None);
+                            for e in p.encryption_algorithms.iter_mut() {
+                                e.1 = None
+                            }
                             if p == modified_proposal {
                                 results.accepted.push(p.clone());
                             } else {
@@ -188,7 +191,11 @@ fn handle_packet(
                     results.vendor_ids.push(v);
                 }
             }
-            _ => {}
+            // Ignore all other payloads
+            Payload::Nonce(_)
+            | Payload::Notify(_)
+            | Payload::Delete(_)
+            | Payload::EncryptedAndAuthenticated(_) => {}
         }
     }
     Ok(())
@@ -203,18 +210,17 @@ fn handle_unsuccessful_responses(
     results: &mut Results,
     variant: NotifyErrorMessage,
 ) {
-    if let Some(&sa) = open_packet
+    if let Some(sa) = open_packet
         .payloads
         .iter()
         .filter_map(|p| match p {
             Payload::SecurityAssociation(sa) => Some(sa),
             _ => None,
         })
-        .collect::<Vec<_>>()
-        .first()
+        .next()
     {
         match &sa.proposals {
-            v if v.len() == 0 => {
+            v if v.is_empty() => {
                 error!(
                     packet = ?open_packet,
                     "Sent IKEv2 packet seems to have no proposals, found a bug."
@@ -251,16 +257,10 @@ fn handle_unsuccessful_responses(
                 } else {
                     // For more than one proposal, it is not known which proposal might have caused
                     // problems; thus we simply split them in half to perform a binary search
-                    let [mut a, mut b] = [vec![], vec![]];
-                    for x in v {
-                        if a.len() == b.len() {
-                            a.push(x.clone());
-                        } else {
-                            b.push(x.clone());
-                        }
-                    }
-                    open.verify.push(a);
-                    open.verify.push(b);
+                    let mut v = v.clone();
+                    let second_half = v.split_off(v.len() / 2);
+                    open.verify.push(v);
+                    open.verify.push(second_half);
                 }
             }
         }
@@ -276,10 +276,10 @@ fn handle_dos_cookie(mut open_packet: IKEv2, open: &mut Open, notification: &Not
         if notification.protocol == SecurityProtocol::Reserved {
             debug!(notification = ?notification, "Received cookie for Reserved, but using anyway");
         }
-        if notification.data.len() > 64 {
+        if notification.data.len() > MAX_COOKIE_DATA_SIZE {
             warn!(
                 notification = ?notification,
-                "Received cookie with more than 64 bytes payload, violating the protocol! Proceeding anyway..."
+                "Received cookie with more than {MAX_COOKIE_DATA_SIZE} bytes payload, violating the protocol! Proceeding anyway..."
             );
         } else if notification.data.is_empty() {
             warn!(

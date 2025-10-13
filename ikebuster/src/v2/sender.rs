@@ -186,9 +186,10 @@ pub(crate) async fn send_packet(
     Ok(())
 }
 
-/// Construct a new hello packet from a list of proposals that should be used in the
+/// Construct a new "hello packet" from a list of proposals that should be used in the
 /// SA of that packet, returning the packet and all unused proposals on success.
 /// Proposals may not all be used if the packet would grow too large if they were added.
+/// The "hello" packet is the first packet of the `IKE_SA_INIT` exchange that negotiates an SA.
 pub(crate) fn make_new_hello_packet(
     mut proposals: Vec<Proposal>,
 ) -> Option<(IKEv2, Vec<Proposal>)> {
