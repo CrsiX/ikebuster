@@ -57,3 +57,10 @@ pub const MINIMAL_NOTIFY_STATUS_MESSAGE_VALUE: u16 = 16384;
 
 /// The maximum size of a single notification cookie payload
 pub const MAX_COOKIE_DATA_SIZE: usize = 64;
+
+/// Microsoft Win32 error code for invalid parameters, as found in the
+/// [docs](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/18d8fbe8-a967-4f1c-ae50-99ca8e491d2d).
+/// It is used to detect INVALID_SYNTAX responses because instead of using
+/// the RFC-compliant payload, Windows Server responds with this value
+/// as notification data in the [super::NotifyErrorMessage::MicrosoftWindowsStatusNotify].
+pub const WIN32_ERROR_INVALID_PARAMETER: u32 = 0x00000057;

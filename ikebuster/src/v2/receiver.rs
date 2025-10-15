@@ -1,4 +1,5 @@
 use isakmp::v2::definitions::constants::MAX_COOKIE_DATA_SIZE;
+use isakmp::v2::definitions::constants::WIN32_ERROR_INVALID_PARAMETER;
 use isakmp::v2::definitions::params::ExchangeType;
 use isakmp::v2::definitions::params::NotifyErrorMessage;
 use isakmp::v2::definitions::params::NotifyStatusMessage;
@@ -8,9 +9,11 @@ use isakmp::v2::definitions::Notification;
 use isakmp::v2::definitions::NotificationType;
 use isakmp::v2::definitions::Payload;
 use isakmp::v2::definitions::Proposal;
+use itertools::Itertools;
 use tracing::debug;
 use tracing::error;
 use tracing::instrument;
+use tracing::trace;
 use tracing::warn;
 
 use crate::v2::Open;
@@ -100,6 +103,21 @@ fn handle_packet(
                         let (open_packet, _) = open.sent.swap_remove(tracked_packet_index);
                         handle_unsuccessful_responses(open_packet, open, stats, results, e);
                         return Ok(());
+                    }
+                    NotifyErrorMessage::MicrosoftWindowsStatusNotify => {
+                        let win_status_notify_data = n.data.iter().copied().collect_array();
+                        debug!("Found a Microsoft Windows status notification with data: {win_status_notify_data:#?}");
+                        trace!("Raw notification data: {:#?}", n.data);
+                        if let Some(win_status_data) = win_status_notify_data {
+                            let error_code = u32::from_be_bytes(win_status_data);
+                            if error_code == WIN32_ERROR_INVALID_PARAMETER {
+                                let (open_packet, _) = open.sent.swap_remove(tracked_packet_index);
+                                handle_unsuccessful_responses(open_packet, open, stats, results, e);
+                                return Ok(());
+                            }
+                        } else {
+                            warn!(packet = ?packet, "Unexpected Windows error Notify data format: {:?}", n);
+                        }
                     }
                     _ => {
                         warn!(packet = ?packet, "Unexpected error notification: {:?}", n);
@@ -202,6 +220,9 @@ fn handle_packet(
 }
 
 /// Handle responses that are neither DoS cookies nor successfully established SAs
+///
+/// If the variant is a [NotifyErrorMessage::MicrosoftWindowsStatusNotify],
+/// it is assumed to be invalid syntax, which counts as rejected anyway.
 #[instrument(skip_all, fields(variant))]
 fn handle_unsuccessful_responses(
     open_packet: IKEv2,
@@ -233,7 +254,8 @@ fn handle_unsuccessful_responses(
                         NotifyErrorMessage::NoProposalChosen => {
                             results.rejected.push(proposal.clone())
                         }
-                        NotifyErrorMessage::InvalidSyntax => {
+                        NotifyErrorMessage::InvalidSyntax
+                        | NotifyErrorMessage::MicrosoftWindowsStatusNotify => {
                             results.invalid_syntax.push(proposal.clone())
                         }
                         NotifyErrorMessage::InvalidKeyExchangePayload => {
