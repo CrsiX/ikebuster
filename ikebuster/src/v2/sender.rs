@@ -206,7 +206,7 @@ pub(crate) fn make_new_hello_packet(
                 dh_group,
                 data: get_random_vec(dh_group.get_key_handshake_length()),
             }),
-            Payload::Nonce(get_random_vec(16)),
+            Payload::Nonce(get_random_vec(64)),
         ])
     } else {
         return None;
