@@ -262,15 +262,15 @@ impl ScanV2Handler {
 pub async fn start_scan(options: &ScanOptionsV2) -> Result<ScanV2Handler, ScanError> {
     let socket = Arc::new(bind(options.ip, options.port, options.listen_port).await?);
 
-    if options.enable_peeking {
-        debug!("Peeking with a blown-up IKEv2 message...");
+    if options.enable_probing {
+        debug!("Probing with a blown-up IKEv2 message...");
         match tokio::time::timeout(RECEIVE_TIMEOUT, probe_target(&socket)).await {
             Ok(v) => match v {
                 Ok(_) => {}
                 Err(e) => return Err(e),
             },
             Err(e) => {
-                warn!("Peek failed with timeout (is the host alive?): {}", e);
+                warn!("Probing failed with timeout (is the host alive?): {}", e);
             }
         };
     }

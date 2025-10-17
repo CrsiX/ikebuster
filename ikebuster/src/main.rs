@@ -95,10 +95,10 @@ pub struct Cli {
     #[clap(long, default_value_t = 45)]
     pub sleep_on_transform_found: u64,
 
-    /// Do not peek before the scan to check the remote host, i.e. send a single packet
-    /// with many transforms first
+    /// Do not probe the target host before the scan to check the remote host,
+    /// i.e. send a single packet with many transforms first
     #[clap(long, action)]
-    pub no_peeking: bool,
+    pub no_probing: bool,
 
     /// Set the verbosity of the output
     #[clap(short, long, action = ArgAction::Count)]
@@ -123,7 +123,7 @@ async fn main_v2(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         interval: cli.interval,
         transform_no: cli.transforms,
         json_state: cli.json_state.clone(),
-        enable_peeking: !cli.no_peeking,
+        enable_probing: !cli.no_probing,
     };
 
     let now = std::time::Instant::now();

@@ -44,8 +44,8 @@ pub struct ScanOptionsV2 {
     pub transform_no: usize,
     /// Optional save file to store scanner state in JSON
     pub json_state: Option<String>,
-    /// Enable peeking with a single packet before the actual scan
-    pub enable_peeking: bool,
+    /// Enable probing with a single packet before the actual scan
+    pub enable_probing: bool,
 }
 
 /// Statistics tracked while executing an IKEv2 scan on a target

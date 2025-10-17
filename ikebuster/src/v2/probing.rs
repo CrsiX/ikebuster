@@ -20,7 +20,7 @@ use crate::v2::sender::make_new_hello_packet;
 use crate::v2::MAX_DATAGRAM_SIZE;
 use crate::ScanError;
 
-/// Peek towards the IKEv2 destination and send a single [IKEv2] packet with
+/// Probe towards the IKEv2 destination and send a single [IKEv2] packet with
 /// two huge proposals that accept a lot of defaults to determine if the
 /// destination is likely to accept our scan. It will not be a fool-proof indicator,
 /// but if this returns `false` then the scan might not produce any results.
