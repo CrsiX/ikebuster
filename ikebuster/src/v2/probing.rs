@@ -165,5 +165,5 @@ fn get_standard_proposals() -> Vec<Proposal> {
         ],
         sequence_numbers: vec![],
     };
-    vec![p1, p2]
+    vec![p2, p1]
 }
